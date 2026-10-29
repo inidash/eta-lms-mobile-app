@@ -161,7 +161,7 @@ export default function OnboardingScreen() {
         {/* Brand Wing Logo */}
         <View style={styles.logoRow}>
           <Image
-            source={require("../../../assets/eta_logo.png")}
+            source={require("../../../assets/images/icon.png")}
             style={styles.logoIcon}
             resizeMode="contain"
           />

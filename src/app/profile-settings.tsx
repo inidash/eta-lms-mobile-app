@@ -1,142 +1,166 @@
-import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Platform,
-  StatusBar,
-  Alert,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import { HugeiconsIcon } from '@hugeicons/react-native';
-import {
-  UserIcon,
-  Mail01Icon,
+  ArrowLeft01Icon,
   CallIcon,
-  Globe02Icon,
-  LockKeyIcon,
   Camera01Icon,
   EyeIcon,
   EyeOffIcon,
-} from '@hugeicons/core-free-icons';
-import { useApp } from '../context/AppContext';
+  Globe02Icon,
+  LockKeyIcon,
+  Mail01Icon,
+  UserIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useApp } from "../context/AppContext";
 
 export default function ProfileSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
   const { userProfile, colors, updateUserProfile, isAuthenticated } = useApp();
 
-  const [name, setName] = useState<string>(userProfile.name || '');
-  const [email, setEmail] = useState<string>(userProfile.email || '');
-  const [phone, setPhone] = useState<string>(userProfile.phone || '');
-  const [country, setCountry] = useState<string>(userProfile.country || 'Nigeria');
-  const [password, setPassword] = useState<string>('');
+  const [name, setName] = useState<string>(userProfile?.name ?? "");
+  const [email, setEmail] = useState<string>(userProfile?.email ?? "");
+  const [phone, setPhone] = useState<string>(userProfile?.phone ?? "");
+  const [country, setCountry] = useState<string>(
+    userProfile?.country ?? "Nigeria",
+  );
+  const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [avatarUri, setAvatarUri] = useState<string>(userProfile.avatar || '');
+  const [avatarUri, setAvatarUri] = useState<string>(userProfile?.avatar ?? "");
   const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   const statusBarPadding =
-    Platform.OS === 'android'
+    Platform.OS === "android"
       ? Math.max(insets.top, StatusBar.currentHeight || 24) + 6
       : Math.max(insets.top, 12);
 
   // Pick Avatar from Gallery
-const handlePickAvatar = async () => {
-  try {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
+  const handlePickAvatar = async () => {
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission Required",
+          "Allow access to your gallery to choose a profile photo.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        // Safe fallback config for Expo SDK 50+
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images || "images",
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.75,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        setAvatarUri(asset.uri);
+        if (asset.base64) {
+          const mime = asset.mimeType || "image/jpeg";
+          setAvatarBase64(`data:${mime};base64,${asset.base64}`);
+        }
+      }
+    } catch (err: any) {
+      console.warn("ImagePicker Error:", err);
+      Alert.alert("Error", "Could not open image picker.");
+    }
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert("Required Field", "Please enter your full name.");
+      return;
+    }
+
+    if (password && password.length < 6) {
       Alert.alert(
-        'Permission Required',
-        'Allow access to your gallery to choose a profile photo.'
+        "Password Too Short",
+        "Password must be at least 6 characters.",
       );
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      // Safe fallback config for Expo SDK 50+
-      mediaTypes: ImagePicker.MediaTypeOptions?.Images || 'images', 
-      allowsEditing: true,
-      aspect:[1, 1],
-      quality: 0.75,
-      base64: true,
-    });
+    // 1. Defensive Check: Ensure the function actually exists before calling it
+    if (typeof updateUserProfile !== "function") {
+      Alert.alert(
+        "Configuration Error",
+        "updateUserProfile is not a function inside useApp(). Check your AppContext provider implementation.",
+      );
+      console.error(
+        "Context Error: updateUserProfile is",
+        typeof updateUserProfile,
+      );
+      return;
+    }
 
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setAvatarUri(asset.uri);
-      if (asset.base64) {
-        const mime = asset.mimeType || 'image/jpeg';
-        setAvatarBase64(`data:${mime};base64,${asset.base64}`);
+    setIsSaving(true);
+
+    try {
+      const res = await updateUserProfile({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        country: country.trim(),
+        password: password.trim() ? password.trim() : undefined,
+        avatarBase64: avatarBase64 || undefined,
+        avatar: !avatarBase64 && avatarUri ? avatarUri : undefined,
+      });
+
+      if (!res && !res.success) {
+        Alert.alert(
+          "Update Failed",
+          res?.error ||
+            "Failed to update profile. No response message received.",
+        );
       }
+    } catch (err: any) {
+      Alert.alert(
+        "Error",
+        err.message || "An error occurred while saving profile.",
+      );
+    } finally {
+      setIsSaving(false);
     }
-  } catch (err: any) {
-    console.warn('ImagePicker Error:', err);
-    Alert.alert('Error', 'Could not open image picker.');
-  }
-};
-
-const handleSave = async () => {
-  if (!name.trim()) {
-    Alert.alert('Required Field', 'Please enter your full name.');
-    return;
-  }
-
-  if (password && password.length < 6) {
-    Alert.alert('Password Too Short', 'Password must be at least 6 characters.');
-    return;
-  }
-
-  // 1. Defensive Check: Ensure the function actually exists before calling it
-  if (typeof updateUserProfile !== 'function') {
-    Alert.alert(
-      'Configuration Error', 
-      'updateUserProfile is not a function inside useApp(). Check your AppContext provider implementation.'
-    );
-    console.error('Context Error: updateUserProfile is', typeof updateUserProfile);
-    return;
-  }
-
-  setIsSaving(true);
-
-  try {
-    const res = await updateUserProfile({
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      country: country.trim(),
-      password: password.trim() ? password.trim() : undefined,
-      avatarBase64: avatarBase64 || undefined,
-      avatar: !avatarBase64 && avatarUri ? avatarUri : undefined,
-    });
-
-    
-    if (!res && !success) {
-      Alert.alert('Update Failed', res?.error || 'Failed to update profile. No response message received.');
-    }
-  } catch (err: any) {
-    Alert.alert('Error', err.message || 'An error occurred while saving profile.');
-  } finally {
-    setIsSaving(false);
-  }
-};
-
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.headerRow, { paddingTop: statusBarPadding }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} disabled={isSaving}>
-          <Text style={[styles.backText, { color: colors.secondary }]}>‹ Back</Text>
+        <TouchableOpacity
+          style={styles.capsuleBackBtn}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={15} color="#FFFFFF" />
+          <Text style={styles.capsuleBackText}>Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile Settings</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Profile Settings
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -152,7 +176,7 @@ const handleSave = async () => {
               source={{
                 uri:
                   avatarUri ||
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop',
+                  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=300&auto=format&fit=crop",
               }}
               style={[styles.avatarImage, { borderColor: colors.primary }]}
             />
@@ -165,14 +189,27 @@ const handleSave = async () => {
               <HugeiconsIcon icon={Camera01Icon} size={16} color="#FFF" />
             </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={handlePickAvatar} disabled={isSaving} style={styles.changePhotoBtn}>
-            <Text style={[styles.changePhotoText, { color: colors.primary }]}>Change Profile Photo</Text>
+          <TouchableOpacity
+            onPress={handlePickAvatar}
+            disabled={isSaving}
+            style={styles.changePhotoBtn}
+          >
+            <Text style={[styles.changePhotoText, { color: colors.primary }]}>
+              Change Profile Photo
+            </Text>
           </TouchableOpacity>
         </View>
 
         {/* Full Name */}
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          Full Name
+        </Text>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <HugeiconsIcon icon={UserIcon} size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
@@ -185,8 +222,15 @@ const handleSave = async () => {
         </View>
 
         {/* Email Address */}
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Email Address</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          Email Address
+        </Text>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <HugeiconsIcon icon={Mail01Icon} size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
@@ -201,8 +245,15 @@ const handleSave = async () => {
         </View>
 
         {/* Phone Number */}
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Phone Number</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          Phone Number
+        </Text>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <HugeiconsIcon icon={CallIcon} size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
@@ -217,8 +268,17 @@ const handleSave = async () => {
 
         {/* Country */}
         <Text style={[styles.inputLabel, { color: colors.text }]}>Country</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <HugeiconsIcon icon={Globe02Icon} size={18} color={colors.textMuted} />
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <HugeiconsIcon
+            icon={Globe02Icon}
+            size={18}
+            color={colors.textMuted}
+          />
           <TextInput
             style={[styles.input, { color: colors.text }]}
             value={country}
@@ -230,9 +290,20 @@ const handleSave = async () => {
         </View>
 
         {/* Optional New Password */}
-        <Text style={[styles.inputLabel, { color: colors.text }]}>New Password (Optional)</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <HugeiconsIcon icon={LockKeyIcon} size={18} color={colors.textMuted} />
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          New Password (Optional)
+        </Text>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <HugeiconsIcon
+            icon={LockKeyIcon}
+            size={18}
+            color={colors.textMuted}
+          />
           <TextInput
             style={[styles.input, { color: colors.text }]}
             value={password}
@@ -255,7 +326,11 @@ const handleSave = async () => {
         <TouchableOpacity
           style={[
             styles.saveBtn,
-            { backgroundColor: isSaving ? colors.primary + '99' : colors.primary },
+            {
+              backgroundColor: isSaving
+                ? colors.primary + "99"
+                : colors.primary,
+            },
           ]}
           activeOpacity={0.88}
           onPress={handleSave}
@@ -277,22 +352,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
   backBtn: {
     paddingVertical: 4,
+    backgroundColor: "#21222A22",
+    borderRadius: 8,
+    paddingHorizontal: 6,
   },
   backText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -300,11 +378,11 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   avatarSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: 14,
   },
   avatarWrapper: {
-    position: 'relative',
+    position: "relative",
   },
   avatarImage: {
     width: 96,
@@ -313,16 +391,32 @@ const styles = StyleSheet.create({
     borderWidth: 3,
   },
   cameraBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: "#FFF",
+  },
+  capsuleBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+  },
+  capsuleBackText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
   },
   changePhotoBtn: {
     marginTop: 8,
@@ -331,17 +425,17 @@ const styles = StyleSheet.create({
   },
   changePhotoText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
     marginTop: 14,
   },
   inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
@@ -355,12 +449,12 @@ const styles = StyleSheet.create({
   saveBtn: {
     paddingVertical: 16,
     borderRadius: 28,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 32,
   },
   saveText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

@@ -1,7 +1,8 @@
-// import {
-//   GoogleSignin,
-//   statusCodes,
-// } from "@react-native-google-signin/google-signin";
+import { GOOGLE_WEB_CLIENT_ID } from "@/config/googleAuth";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import { API_CONFIG } from "../config/apiConfig";
 import { UserProfile } from "../context/AppContext";
 import { apiClient, ApiResponse } from "./apiClient";
@@ -69,9 +70,9 @@ const saveSession = async (
   return { token, user: userProfile };
 };
 
-// GoogleSignin.configure({
-//   webClientId: GOOGLE_WEB_CLIENT_ID,
-// });
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+});
 
 export const authService = {
   /**
@@ -123,80 +124,81 @@ export const authService = {
    * The WordPress endpoint must verify the Google ID token and return
    * a WordPress token and user profile.
    */
-  // async googleLogin(): Promise<ApiResponse<LoginResult>> {
-  //   try {
-  //     await GoogleSignin.hasPlayServices({
-  //       showPlayServicesUpdateDialog: true,
-  //     });
 
-  //     const response: any = await GoogleSignin.signIn();
+  async googleLogin(): Promise<ApiResponse<LoginResult>> {
+    try {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
 
-  //     // Handle cancellation and both current and older package response shapes.
-  //     if (response?.type === "cancelled" || response?.type === "canceled") {
-  //       return {
-  //         success: false,
-  //         error: "Google sign-in was cancelled.",
-  //       };
-  //     }
+      const response: any = await GoogleSignin.signIn();
 
-  //     const googleData = response?.data || response;
-  //     const idToken = googleData?.idToken;
+      // Handle cancellation and both current and older package response shapes.
+      if (response?.type === "cancelled" || response?.type === "canceled") {
+        return {
+          success: false,
+          error: "Google sign-in was cancelled.",
+        };
+      }
 
-  //     if (!idToken) {
-  //       return {
-  //         success: false,
-  //         error:
-  //           "Google did not return an ID token. Check your Google Sign-In configuration.",
-  //       };
-  //     }
+      const googleData = response?.data || response;
+      const idToken = googleData?.idToken;
 
-  //     // API_CONFIG.ENDPOINTS.GOOGLE_AUTH should point to your WordPress
-  //     // endpoint, e.g. /wp-json/eta/v1/google-auth.
-  //     const res: any = await apiClient.post(API_CONFIG.ENDPOINTS.GOOGLE_AUTH, {
-  //       id_token: idToken,
-  //     });
+      if (!idToken) {
+        return {
+          success: false,
+          error:
+            "Google did not return an ID token. Check your Google Sign-In configuration.",
+        };
+      }
 
-  //     const payload = res?.data?.data || res?.data;
-  //     const token = payload?.token;
-  //     const user = payload?.user;
+      // API_CONFIG.ENDPOINTS.GOOGLE_AUTH should point to your WordPress
+      // endpoint, e.g. /wp-json/eta/v1/google-auth.
+      const res: any = await apiClient.post(API_CONFIG.ENDPOINTS.GOOGLE_AUTH, {
+        id_token: idToken,
+      });
 
-  //     if (!res.success || !token) {
-  //       return {
-  //         success: false,
-  //         error: getResponseError(
-  //           res,
-  //           "Google sign-in failed. Please try again.",
-  //         ),
-  //       };
-  //     }
+      const payload = res?.data?.data || res?.data;
+      const token = payload?.token;
+      const user = payload?.user;
 
-  //     const googleUser = googleData?.user;
-  //     const result = await saveSession(
-  //       token,
-  //       user || {
-  //         name: googleUser?.name,
-  //         email: googleUser?.email,
-  //         avatar: googleUser?.photo,
-  //       },
-  //       googleUser?.email,
-  //     );
+      if (!res.success || !token) {
+        return {
+          success: false,
+          error: getResponseError(
+            res,
+            "Google sign-in failed. Please try again.",
+          ),
+        };
+      }
 
-  //     return { success: true, data: result };
-  //   } catch (error: any) {
-  //     let message =
-  //       error?.message || "Google sign-in failed. Please try again.";
+      const googleUser = googleData?.user;
+      const result = await saveSession(
+        token,
+        user || {
+          name: googleUser?.name,
+          email: googleUser?.email,
+          avatar: googleUser?.photo,
+        },
+        googleUser?.email,
+      );
 
-  //     if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
-  //       message = "Google sign-in was cancelled.";
-  //     } else if (error?.code === statusCodes.IN_PROGRESS) {
-  //       message = "Google sign-in is already in progress.";
-  //     } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-  //       message = "Google Play Services is unavailable or needs updating.";
-  //     }
+      return { success: true, data: result };
+    } catch (error: any) {
+      let message =
+        error?.message || "Google sign-in failed. Please try again.";
 
-  //     return { success: false, error: message };
-  //   }
-  // },
+      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+        message = "Google sign-in was cancelled.";
+      } else if (error?.code === statusCodes.IN_PROGRESS) {
+        message = "Google sign-in is already in progress.";
+      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        message = "Google Play Services is unavailable or needs updating.";
+      }
+
+      return { success: false, error: message };
+    }
+  },
 
   /**
    * Register a new user on Expressteck WordPress, then log in.
@@ -270,7 +272,7 @@ export const authService = {
     email?: string;
     phone?: string;
     country?: string;
-    password?: string;
+    // password?: string;
     avatar?: string;
     avatar_base64?: string;
   }): Promise<ApiResponse<UserProfile>> {

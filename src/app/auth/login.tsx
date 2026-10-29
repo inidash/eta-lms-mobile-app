@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   continueBtnActive: {
-    backgroundColor: "#2d94e7",
+    backgroundColor: "#FF5500",
     elevation: 4,
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 2 },
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   divider: {
     flex: 1,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     textAlign: "center",
     maxWidth: 300,
-    marginTop: 22,
+    marginTop: 15,
   },
   disclaimerLink: {
     color: "#8E8E9C",
@@ -460,9 +460,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     flexWrap: "wrap",
-    marginTop: 12,
+    // marginTop: 6,
     marginBottom: 20,
-    marginTop: 20,
   },
   footerText: {
     fontSize: 13,

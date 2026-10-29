@@ -1,4 +1,5 @@
 import {
+  ArrowLeft01Icon,
   CallIcon,
   EyeIcon,
   EyeOffIcon,
@@ -77,10 +78,14 @@ export default function SignUpScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header with Safe Area Top Padding */}
       <View style={[styles.headerRow, { paddingTop: statusBarPadding }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.secondary }]}>
-            ‹ Back
-          </Text>
+        <TouchableOpacity
+          style={styles.capsuleBackBtn}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={15} color="#FFFFFF" />
+          <Text style={styles.capsuleBackText}>Back</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -335,6 +340,22 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
+  capsuleBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+  },
+  capsuleBackText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+  },
   scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 10,
@@ -386,7 +407,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 24,
     marginBottom: 16,
-    backgroundColor: "#2d94e7",
+    backgroundColor: "#FF5500",
   },
   submitText: {
     color: "#FFF",

@@ -1,21 +1,21 @@
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 let AsyncStorage: any = null;
 let isNativeAsyncStorageAvailable = true;
 
 try {
-  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  AsyncStorage = require("@react-native-async-storage/async-storage").default;
 } catch (e) {
   AsyncStorage = null;
   isNativeAsyncStorageAvailable = false;
 }
 
 const STORAGE_KEYS = {
-  USER_TOKEN: 'eta_app_user_token',
-  USER_PROFILE: 'eta_app_user_profile',
-  CART_IDS: 'eta_app_cart_ids',
-  WISHLIST_IDS: 'eta_app_wishlist_ids',
-  ENROLLED_COURSES: 'eta_app_enrolled_courses',
+  USER_TOKEN: "eta_app_user_token",
+  USER_PROFILE: "eta_app_user_profile",
+  CART_IDS: "eta_app_cart_ids",
+  WISHLIST_IDS: "eta_app_wishlist_ids",
+  ENROLLED_COURSES: "eta_app_enrolled_courses",
 };
 
 const memoryStore: Record<string, string> = {};
@@ -34,7 +34,11 @@ export const storageService = {
     }
 
     // 2. Try Web localStorage
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      window.localStorage
+    ) {
       try {
         return window.localStorage.getItem(key);
       } catch (e) {
@@ -58,7 +62,11 @@ export const storageService = {
       }
     }
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      window.localStorage
+    ) {
       try {
         window.localStorage.setItem(key, value);
       } catch (e) {
@@ -79,7 +87,11 @@ export const storageService = {
       }
     }
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    if (
+      Platform.OS === "web" &&
+      typeof window !== "undefined" &&
+      window.localStorage
+    ) {
       try {
         window.localStorage.removeItem(key);
       } catch (e) {
@@ -97,6 +109,26 @@ export const storageService = {
     return this.setItem(STORAGE_KEYS.USER_TOKEN, token);
   },
 
+  // User Profile Helpers
+  async getUserProfile(): Promise<Record<string, any> | null> {
+    const raw = await this.getItem(STORAGE_KEYS.USER_PROFILE);
+
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(raw) as Record<string, any>;
+    } catch (error) {
+      console.error("Failed to parse stored user profile:", error);
+      return null;
+    }
+  },
+
+  async saveUserProfile(profile: Record<string, any>): Promise<void> {
+    await this.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(profile));
+  },
+
   async clearUserSession(): Promise<void> {
     await this.removeItem(STORAGE_KEYS.USER_TOKEN);
     await this.removeItem(STORAGE_KEYS.USER_PROFILE);
@@ -104,12 +136,12 @@ export const storageService = {
 
   STORAGE_KEYS: {
     ...STORAGE_KEYS,
-    OFFLINE_DOWNLOADS: 'eta_app_offline_downloads',
+    OFFLINE_DOWNLOADS: "eta_app_offline_downloads",
   },
 
   // Offline Downloads Sandbox Helpers
   async getOfflineDownloads(): Promise<OfflineDownloadItem[]> {
-    const raw = await this.getItem('eta_app_offline_downloads');
+    const raw = await this.getItem("eta_app_offline_downloads");
     if (!raw) return [];
     try {
       return JSON.parse(raw);
@@ -126,14 +158,14 @@ export const storageService = {
     } else {
       list.unshift(item);
     }
-    await this.setItem('eta_app_offline_downloads', JSON.stringify(list));
+    await this.setItem("eta_app_offline_downloads", JSON.stringify(list));
     return true;
   },
 
   async removeOfflineDownload(lessonId: string): Promise<void> {
     const list = await this.getOfflineDownloads();
     const filtered = list.filter((x) => x.id !== lessonId);
-    await this.setItem('eta_app_offline_downloads', JSON.stringify(filtered));
+    await this.setItem("eta_app_offline_downloads", JSON.stringify(filtered));
   },
 
   async isLessonOffline(lessonId: string): Promise<boolean> {

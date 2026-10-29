@@ -1,13 +1,12 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import {HugeiconsIcon} from "@hugeicons/react-native";
-import { GoogleIcon } from '@hugeicons/core-free-icons';
 import { authService, LoginResult } from "../services/authService";
 
 type Props = {
@@ -57,7 +56,11 @@ export default function GoogleSignInButton({
       ) : (
         <View style={styles.content}>
           <Text style={styles.googleIcon}>
-            <HugeiconsIcon icon={GoogleIcon} size={30} color="#2d94e7" />
+            {/* <HugeiconsIcon icon={GoogleIcon} size={30} color="#2d94e7" /> */}
+            <Image
+              source={require("../../assets/images/google-icon.png")}
+              style={styles.googleIcon}
+            />
           </Text>
           <Text style={styles.label}>{label}</Text>
         </View>
@@ -96,5 +99,9 @@ const styles = StyleSheet.create({
     color: "#202124",
     fontSize: 15,
     fontWeight: "600",
+  },
+  googleIcon: {
+    width: 30,
+    height: 30,
   },
 });

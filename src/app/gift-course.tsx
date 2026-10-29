@@ -1,62 +1,102 @@
-import React, { useState } from 'react';
 import {
-  View,
+  ArrowLeft01Icon,
+  GiftIcon,
+  Mail01Icon,
+  UserIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  Alert,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Platform,
-  StatusBar,
-  Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { HugeiconsIcon } from '@hugeicons/react-native';
-import { GiftIcon, Mail01Icon, UserIcon } from '@hugeicons/core-free-icons';
-import { useApp } from '../context/AppContext';
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useApp } from "../context/AppContext";
 
 export default function GiftCourseScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useApp();
 
-  const [recipientName, setRecipientName] = useState<string>('');
-  const [recipientEmail, setRecipientEmail] = useState<string>('');
-  const [personalNote, setPersonalNote] = useState<string>('');
+  const [recipientName, setRecipientName] = useState<string>("");
+  const [recipientEmail, setRecipientEmail] = useState<string>("");
+  const [personalNote, setPersonalNote] = useState<string>("");
 
-  const statusBarPadding = Platform.OS === 'android'
-    ? Math.max(insets.top, StatusBar.currentHeight || 24) + 6
-    : Math.max(insets.top, 12);
+  const statusBarPadding =
+    Platform.OS === "android"
+      ? Math.max(insets.top, StatusBar.currentHeight || 24) + 6
+      : Math.max(insets.top, 12);
 
   const handleSendGift = () => {
-    Alert.alert('Gift Sent!', `Course gift invitation sent to ${recipientEmail}!`);
+    Alert.alert(
+      "Gift Sent!",
+      `Course gift invitation sent to ${recipientEmail}!`,
+    );
     router.back();
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.headerRow, { paddingTop: statusBarPadding }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.secondary }]}>‹ Back</Text>
+        <TouchableOpacity
+          style={styles.capsuleBackBtn}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={15} color="#FFFFFF" />
+          <Text style={styles.capsuleBackText}>Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Gift a Course</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Gift a Course
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.giftBox, { backgroundColor: 'rgba(0, 102, 255, 0.12)' }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View
+          style={[
+            styles.heroCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <View
+            style={[
+              styles.giftBox,
+              { backgroundColor: "rgba(0, 102, 255, 0.12)" },
+            ]}
+          >
             <HugeiconsIcon icon={GiftIcon} size={32} color={colors.primary} />
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>Share Knowledge with Friends</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Share Knowledge with Friends
+          </Text>
           <Text style={[styles.sub, { color: colors.textSecondary }]}>
-            Gift any course to your friends, family, or colleagues and help them build career-ready tech skills.
+            Gift any course to your friends, family, or colleagues and help them
+            build career-ready tech skills.
           </Text>
         </View>
 
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Recipient Name</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          Recipient Name
+        </Text>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <HugeiconsIcon icon={UserIcon} size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
@@ -67,8 +107,15 @@ export default function GiftCourseScreen() {
           />
         </View>
 
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Recipient Email Address</Text>
-        <View style={[styles.inputBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          Recipient Email Address
+        </Text>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <HugeiconsIcon icon={Mail01Icon} size={18} color={colors.textMuted} />
           <TextInput
             style={[styles.input, { color: colors.text }]}
@@ -80,8 +127,15 @@ export default function GiftCourseScreen() {
           />
         </View>
 
-        <Text style={[styles.inputLabel, { color: colors.text }]}>Personal Note (Optional)</Text>
-        <View style={[styles.textAreaBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          Personal Note (Optional)
+        </Text>
+        <View
+          style={[
+            styles.textAreaBox,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <TextInput
             style={[styles.textArea, { color: colors.text }]}
             placeholder="Write a warm note..."
@@ -110,9 +164,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
@@ -121,11 +175,27 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
+  },
+  capsuleBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+  },
+  capsuleBackText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -133,7 +203,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   heroCard: {
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 20,
     borderWidth: 1,
     padding: 20,
@@ -143,30 +213,30 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
   },
   title: {
     fontSize: 17,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   sub: {
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 17,
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
     marginTop: 10,
   },
   inputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
@@ -185,17 +255,17 @@ const styles = StyleSheet.create({
   },
   textArea: {
     fontSize: 14,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   sendBtn: {
     paddingVertical: 16,
     borderRadius: 28,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 24,
   },
   sendText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

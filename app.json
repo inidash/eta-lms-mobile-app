@@ -4,21 +4,21 @@
     "slug": "express-tech-academy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/eta_logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "etaapp",
     "userInterfaceStyle": "dark",
     "android": {
-      "package": "com.expresstech.app",
+      "package": "com.eta.app",
       "adaptiveIcon": {
         "backgroundColor": "#0A0F1D",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundImage": "./assets/images/icon.png",
+        "monochromeImage": "./assets/images/icon.png"
       }
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/eta-splash.png"
     },
     "plugins": [
       "expo-router",
@@ -36,6 +36,19 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5bcbf9ff-b0ba-486c-b321-22f160763716"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/5bcbf9ff-b0ba-486c-b321-22f160763716"
+    },
+    "ios": {}
   }
 }
