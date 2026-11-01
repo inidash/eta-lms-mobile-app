@@ -1,53 +1,89 @@
-import { API_CONFIG } from '../config/apiConfig';
-import { apiClient, ApiResponse } from './apiClient';
-import { storageService } from './storage';
-import { Course, Instructor, ModuleItem } from '../data/mockData';
+import { API_CONFIG } from "../config/apiConfig";
+import { Course, Instructor, ModuleItem } from "../data/mockData";
+import { apiClient, ApiResponse } from "./apiClient";
+import { storageService } from "./storage";
+
+export interface LessonProgress {
+  completed: boolean;
+  score: number | null;
+  progress_percent: number;
+  position_seconds: number;
+  time?: string;
+}
+
+export type CourseProgress = Record<string, Record<string, LessonProgress>>;
 
 // Helper to determine the authentic Expressteck category based on course title or slug
 const resolveCategory = (title: string, slug?: string): string => {
-  const lower = (title + ' ' + (slug || '')).toLowerCase();
+  const lower = (title + " " + (slug || "")).toLowerCase();
   if (
-    lower.includes('webhook') ||
-    lower.includes('private') ||
-    lower.includes('tracking') ||
-    lower.includes('white label') ||
-    lower.includes('customize')
+    lower.includes("webhook") ||
+    lower.includes("private") ||
+    lower.includes("tracking") ||
+    lower.includes("white label") ||
+    lower.includes("customize")
   ) {
-    return 'Customize & Automate Your Platform';
+    return "Customize & Automate Your Platform";
   }
   if (
-    lower.includes('virtual classes') ||
-    lower.includes('content drip') ||
-    lower.includes('prerequisites') ||
-    lower.includes('engage')
+    lower.includes("virtual classes") ||
+    lower.includes("content drip") ||
+    lower.includes("prerequisites") ||
+    lower.includes("engage")
   ) {
-    return 'Engage & Retain Your Learners';
+    return "Engage & Retain Your Learners";
   }
   if (
-    lower.includes('multi-instructor') ||
-    lower.includes('groups') ||
-    lower.includes('stripe') ||
-    lower.includes('monetiz') ||
-    lower.includes('bundle')
+    lower.includes("multi-instructor") ||
+    lower.includes("groups") ||
+    lower.includes("stripe") ||
+    lower.includes("monetiz") ||
+    lower.includes("bundle")
   ) {
-    return 'Monetize & Grow Your Academy';
+    return "Monetize & Grow Your Academy";
   }
-  return 'Build Your First Course';
+  return "Build Your First Course";
 };
 
-import { INITIAL_COURSES } from '../data/initialCourses';
+import { INITIAL_COURSES } from "../data/initialCourses";
 
 // Helper to return curriculum modules for a course
-const resolveModules = (courseId: string, title: string, slug?: string): ModuleItem[] => {
+const resolveModules = (
+  courseId: string,
+  title: string,
+  slug?: string,
+): ModuleItem[] => {
   const match = INITIAL_COURSES.find(
     (c) =>
       String(c.id) === String(courseId) ||
       (slug && c.slug && c.slug === slug) ||
-      (c.title && title && c.title.toLowerCase().trim() === title.toLowerCase().trim())
+      (c.title &&
+        title &&
+        c.title.toLowerCase().trim() === title.toLowerCase().trim()),
   );
   return match?.modules || [];
 };
 
+const debugLessonVideo = (source: string, modules: any[]) => {
+  for (const module of modules || []) {
+    for (const lesson of module.lessons || []) {
+      if (String(lesson.id) === "685") {
+        console.log(`[${source}] LESSON 685:`, {
+          id: lesson.id,
+          title: lesson.title,
+          videoUrl: lesson.videoUrl,
+          video_url: lesson.video_url,
+          url: lesson.url,
+          video: lesson.video,
+          allKeys: Object.keys(lesson),
+        });
+        return;
+      }
+    }
+  }
+
+  console.log(`[${source}] Lesson 685 not found`);
+};
 export const courseService = {
   /**
    * Fetch Live Course Catalog dynamically from Expressteck.tech
@@ -63,49 +99,80 @@ export const courseService = {
 
     // 3. Fall back to embedded production catalog if network request is unreachable
     if (!res.success || !Array.isArray(res.data) || res.data.length === 0) {
-      console.warn('[CourseService] Live API unreachable or empty. Serving embedded production courses.');
+      console.warn(
+        "[CourseService] Live API unreachable or empty. Serving embedded production courses.",
+      );
       return { success: true, data: INITIAL_COURSES };
     }
 
     // Map live JSON items to app's Course model
     const courses: Course[] = res.data.map((item: any) => {
-      const rawTitle = item.title?.rendered || item.title || item.name || 'Untitled Course';
+      const rawTitle =
+        item.title?.rendered || item.title || item.name || "Untitled Course";
       const cleanTitle = rawTitle
-        .replace(/&#8211;/g, '-')
-        .replace(/&#038;/g, '&')
-        .replace(/&amp;/g, '&')
+        .replace(/&#8211;/g, "-")
+        .replace(/&#038;/g, "&")
+        .replace(/&amp;/g, "&")
         .trim();
 
-      const slug = item.slug || '';
-      const category = item.category && item.category !== 'Development'
-        ? item.category
-        : resolveCategory(cleanTitle, slug);
+      const slug = item.slug || "";
+      const category =
+        item.category && item.category !== "Development"
+          ? item.category
+          : resolveCategory(cleanTitle, slug);
+
+      if (String(item.id) === "680") {
+        debugLessonVideo("CATALOGUE API", modules);
+      }
 
       // Clean HTML description
-      let rawDesc = item.excerpt?.rendered || item.content?.rendered || item.description || '';
-      const cleanDesc = rawDesc.replace(/<[^>]*>?/gm, '').replace(/\[&hellip;\]/g, '...').trim();
+      let rawDesc =
+        item.excerpt?.rendered ||
+        item.content?.rendered ||
+        item.description ||
+        "";
+      const cleanDesc = rawDesc
+        .replace(/<[^>]*>?/gm, "")
+        .replace(/\[&hellip;\]/g, "...")
+        .trim();
 
       // Featured thumbnail
-      const embeddedImage = item._embedded?.['wp:featuredmedia']?.[0]?.source_url;
-      const thumbnail = embeddedImage || item.thumbnail || item.featured_image || 'https://expressteck.tech/wp-content/uploads/2025/10/Getting-Started-with-Masteriyo-LMS-1.jpg';
+      const embeddedImage =
+        item._embedded?.["wp:featuredmedia"]?.[0]?.source_url;
+      const thumbnail =
+        embeddedImage ||
+        item.thumbnail ||
+        item.featured_image ||
+        "https://expressteck.tech/wp-content/uploads/2025/10/Getting-Started-with-Masteriyo-LMS-1.jpg";
 
-      const regularPrice = Number(item.originalPrice || item.meta?.regular_price || 25000);
+      const regularPrice = Number(
+        item.originalPrice || item.meta?.regular_price || 25000,
+      );
       const salePrice = Number(item.price || item.meta?.price || 15000);
-      const discountPct = regularPrice > salePrice ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 40;
+      const discountPct =
+        regularPrice > salePrice
+          ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+          : 40;
 
       // Extract real modules / curriculum
-      const modules = item.modules && Array.isArray(item.modules) && item.modules.length > 0
-        ? item.modules
-        : resolveModules(item.id, cleanTitle, slug);
+      const modules =
+        item.modules && Array.isArray(item.modules) && item.modules.length > 0
+          ? item.modules
+          : resolveModules(item.id, cleanTitle, slug);
 
-      const instructor = item.instructor || item._embedded?.author?.[0]?.name || 'Express Tech Academy';
+      const instructor =
+        item.instructor ||
+        item._embedded?.author?.[0]?.name ||
+        "Express Tech Academy";
 
       return {
         id: String(item.id),
         product_id: item.product_id ? String(item.product_id) : undefined,
         slug,
         title: cleanTitle,
-        instructor: instructor.includes('@') ? 'Express Tech Academy' : instructor,
+        instructor: instructor.includes("@")
+          ? "Express Tech Academy"
+          : instructor,
         category,
         originalPrice: regularPrice,
         price: salePrice,
@@ -120,42 +187,54 @@ export const courseService = {
         progress: Number(item.progress || 0),
         modules,
         requirements: [
-          'Access to a computer, laptop, or smartphone.',
-          'Internet connection for video lessons and materials.'
+          "Access to a computer, laptop, or smartphone.",
+          "Internet connection for video lessons and materials.",
         ],
         certificateIssued: true,
       };
     });
 
-    console.log(`[CourseService] Dynamically loaded ${courses.length} courses from Expressteck.tech`);
+    console.log(
+      `[CourseService] Dynamically loaded ${courses.length} courses from Expressteck.tech`,
+    );
     return { success: true, data: courses };
   },
 
   /**
    * Fetch Course Details with full modules and curriculum dynamically
    */
-  async fetchCourseDetails(courseId: string): Promise<ApiResponse<Course | null>> {
+  async fetchCourseDetails(
+    courseId: string,
+  ): Promise<ApiResponse<Course | null>> {
     const listRes = await this.fetchCourses();
     let found: Course | undefined;
     if (listRes.success && listRes.data) {
       found = listRes.data.find(
-        (c) => c.id === courseId || c.product_id === courseId || c.slug === courseId
+        (c) =>
+          c.id === courseId || c.product_id === courseId || c.slug === courseId,
       );
     }
 
     // Retrieve full curriculum modules and lessons from API
     try {
-      const curRes = await apiClient.get<any>(`${API_CONFIG.ENDPOINTS.COURSE_CURRICULUM(courseId)}`);
-      if (curRes.success && curRes.data?.modules && Array.isArray(curRes.data.modules)) {
+      const curRes = await apiClient.get<any>(
+        `${API_CONFIG.ENDPOINTS.COURSE_CURRICULUM(courseId)}`,
+      );
+      if (
+        curRes.success &&
+        curRes.data?.modules &&
+        Array.isArray(curRes.data.modules)
+      ) {
         if (found) {
           found.modules = curRes.data.modules;
         } else {
           found = {
             id: courseId,
-            title: curRes.data.title || 'Course Masterclass',
-            thumbnail: 'https://expressteck.tech/wp-content/uploads/2026/10/Getting-Started-with-Masteriyo-LMS-1.jpg',
-            instructor: 'Express Tech Academy',
-            category: 'Build Your First Course',
+            title: curRes.data.title || "Course Masterclass",
+            thumbnail:
+              "https://expressteck.tech/wp-content/uploads/2026/10/Getting-Started-with-Masteriyo-LMS-1.jpg",
+            instructor: "Express Tech Academy",
+            category: "Build Your First Course",
             price: 0,
             originalPrice: 0,
             discount: 0,
@@ -168,19 +247,41 @@ export const courseService = {
         }
       }
     } catch (e) {
-      console.warn('[CourseService] Could not load curriculum modules:', e);
+      console.warn("[CourseService] Could not load curriculum modules:", e);
     }
 
     if (found) {
       return { success: true, data: found };
     }
-    return { success: false, error: 'Course not found' };
+    return { success: false, error: "Course not found" };
   },
 
   /**
    * Fetch dynamic categories from the live site
    */
-  async fetchCategories(): Promise<{ id: string; name: string; icon: string }[]> {
+
+  // async updateLessonProgress(
+  // courseId: string,
+  // lessonId: string,
+  // progress: {
+  //   completed?: boolean;
+  //   score?: number | null;
+  //   progress_percent?: number;
+  //   position_seconds?: number;
+  // }
+  // ): Promise<ApiResponse<any>> {
+  //   return apiClient.post(API_CONFIG.ENDPOINTS.USER_PROGRESS, {
+  //     course_id: courseId,
+  //     lesson_id: lessonId,
+  //     completed: progress.completed ?? false,
+  //     score: progress.score ?? null,
+  //     progress_percent: progress.progress_percent ?? 0,
+  //     position_seconds: progress.position_seconds ?? 0,
+  //   });
+  // },
+  async fetchCategories(): Promise<
+    { id: string; name: string; icon: string }[]
+  > {
     const res = await apiClient.get(API_CONFIG.ENDPOINTS.CATEGORIES);
     if (res.success && Array.isArray(res.data) && res.data.length > 0) {
       return res.data;
@@ -202,26 +303,30 @@ export const courseService = {
   /**
    * Fetch live site information (promo, FAQ, support email)
    */
-  async fetchSiteInfo(): Promise<{ promoText: string; contactEmail: string; faqs: { q: string; a: string }[] }> {
+  async fetchSiteInfo(): Promise<{
+    promoText: string;
+    contactEmail: string;
+    faqs: { q: string; a: string }[];
+  }> {
     const res = await apiClient.get(API_CONFIG.ENDPOINTS.SITE_INFO);
     if (res.success && res.data) {
       return res.data;
     }
     return {
-      promoText: 'Limited Time Offer — Get Up to 70% Off Courses!',
-      contactEmail: 'hello@expressteck.tech',
+      promoText: "Limited Time Offer — Get Up to 70% Off Courses!",
+      contactEmail: "hello@expressteck.tech",
       faqs: [
         {
-          q: 'After payment is confirmed, how do I begin?',
-          a: 'Sign in to your account and open My Learning to begin immediately.',
+          q: "After payment is confirmed, how do I begin?",
+          a: "Sign in to your account and open My Learning to begin immediately.",
         },
         {
-          q: 'What format are the courses?',
-          a: 'Courses are self-paced video classes. Any live-session information is shared inside the relevant course.',
+          q: "What format are the courses?",
+          a: "Courses are self-paced video classes. Any live-session information is shared inside the relevant course.",
         },
         {
-          q: 'When does my certificate become available?',
-          a: 'After completing all required lessons and activities, your certificate becomes available from your learning dashboard.',
+          q: "When does my certificate become available?",
+          a: "After completing all required lessons and activities, your certificate becomes available from your learning dashboard.",
         },
       ],
     };
@@ -230,68 +335,177 @@ export const courseService = {
   /**
    * Fetch user's enrolled courses from Expressteck.tech
    */
+  // async fetchEnrolledCourses(): Promise<ApiResponse<Course[]>> {
+  //   const token = await storageService.getUserToken();
+  //   let email = '';
+  //   try {
+  //     const profileStr = await storageService.getItem(storageService.STORAGE_KEYS.USER_PROFILE);
+  //     if (profileStr) {
+  //       const parsed = JSON.parse(profileStr);
+  //       email = parsed?.email || '';
+  //     }
+  //   } catch (e) {}
+
+  //   if (!token && !email) {
+  //     return { success: true, data: [] };
+  //   }
+
+  //   const queryParts: string[] = [];
+  //   if (email) queryParts.push(`email=${encodeURIComponent(email)}`);
+  //   if (token) queryParts.push(`auth_token=${encodeURIComponent(token)}`);
+  //   const query = queryParts.length ? `?${queryParts.join('&')}` : '';
+
+  //   const res = await apiClient.get(`${API_CONFIG.ENDPOINTS.USER_ENROLLMENTS}${query}`);
+  //   const list = Array.isArray(res.data)
+  //     ? res.data
+  //     : (Array.isArray((res.data as any)?.enrolled) ? (res.data as any).enrolled : []);
+
+  //   if (list.length > 0) {
+  //     return {
+  //       success: true,
+  //       data: list.map((item: any) => ({
+  //         id: String(item.id),
+  //         product_id: item.product_id ? String(item.product_id) : undefined,
+  //         slug: item.slug || '',
+  //         title: item.title || 'Masterclass',
+  //         thumbnail: item.thumbnail || 'https://expressteck.tech/wp-content/uploads/2026/10/1-1024x576.jpeg',
+  //         instructor: item.instructor || 'Express Tech Academy',
+  //         category: item.category || 'My Learning',
+  //         price: Number(item.price || 0),
+  //         originalPrice: Number(item.originalPrice || 0),
+  //         discount: 0,
+  //         studentsCount: Number(item.studentsCount || 148),
+  //         rating: Number(item.rating || 5.0),
+  //         reviewsCount: Number(item.reviewsCount || 28),
+  //         daysLeft: 0,
+  //         isEnrolled: true,
+  //         progress: Number(item.progress || 15),
+  //         modules: item.modules && Array.isArray(item.modules) && item.modules.length > 0
+  //           ? item.modules
+  //           : resolveModules(String(item.id), item.title || '', item.slug),
+  //         requirements: [
+  //           'Access to a computer, laptop, or smartphone.',
+  //           'Internet connection for video lessons and materials.'
+  //         ],
+  //         certificateIssued: true,
+  //       })),
+  //     };
+  //   }
+  //   return {
+  //     success: true,
+  //     data: [],
+  //   };
+  // },
+
   async fetchEnrolledCourses(): Promise<ApiResponse<Course[]>> {
     const token = await storageService.getUserToken();
-    let email = '';
+
+    let email = "";
+
     try {
-      const profileStr = await storageService.getItem(storageService.STORAGE_KEYS.USER_PROFILE);
+      const profileStr = await storageService.getItem(
+        storageService.STORAGE_KEYS.USER_PROFILE,
+      );
+
       if (profileStr) {
         const parsed = JSON.parse(profileStr);
-        email = parsed?.email || '';
+        email = parsed?.email || "";
       }
     } catch (e) {}
 
     if (!token && !email) {
-      return { success: true, data: [] };
+      return {
+        success: true,
+        data: [],
+      };
     }
 
     const queryParts: string[] = [];
-    if (email) queryParts.push(`email=${encodeURIComponent(email)}`);
-    if (token) queryParts.push(`auth_token=${encodeURIComponent(token)}`);
-    const query = queryParts.length ? `?${queryParts.join('&')}` : '';
 
-    const res = await apiClient.get(`${API_CONFIG.ENDPOINTS.USER_ENROLLMENTS}${query}`);
+    if (email) {
+      queryParts.push(`email=${encodeURIComponent(email)}`);
+    }
+
+    if (token) {
+      queryParts.push(`auth_token=${encodeURIComponent(token)}`);
+    }
+
+    const query = queryParts.length ? `?${queryParts.join("&")}` : "";
+
+    const res = await apiClient.get(
+      `${API_CONFIG.ENDPOINTS.USER_ENROLLMENTS}${query}`,
+    );
+
     const list = Array.isArray(res.data)
       ? res.data
-      : (Array.isArray((res.data as any)?.enrolled) ? (res.data as any).enrolled : []);
+      : Array.isArray((res.data as any)?.enrolled)
+        ? (res.data as any).enrolled
+        : [];
 
     if (list.length > 0) {
       return {
         success: true,
-        data: list.map((item: any) => ({
-          id: String(item.id),
-          product_id: item.product_id ? String(item.product_id) : undefined,
-          slug: item.slug || '',
-          title: item.title || 'Masterclass',
-          thumbnail: item.thumbnail || 'https://expressteck.tech/wp-content/uploads/2026/10/1-1024x576.jpeg',
-          instructor: item.instructor || 'Express Tech Academy',
-          category: item.category || 'My Learning',
-          price: Number(item.price || 0),
-          originalPrice: Number(item.originalPrice || 0),
-          discount: 0,
-          studentsCount: Number(item.studentsCount || 148),
-          rating: Number(item.rating || 5.0),
-          reviewsCount: Number(item.reviewsCount || 28),
-          daysLeft: 0,
-          isEnrolled: true,
-          progress: Number(item.progress || 15),
-          modules: item.modules && Array.isArray(item.modules) && item.modules.length > 0
-            ? item.modules
-            : resolveModules(String(item.id), item.title || '', item.slug),
-          requirements: [
-            'Access to a computer, laptop, or smartphone.',
-            'Internet connection for video lessons and materials.'
-          ],
-          certificateIssued: true,
-        })),
+
+        data: list.map((item: any) => {
+          // Resolve course modules
+          const modules =
+            item.modules &&
+            Array.isArray(item.modules) &&
+            item.modules.length > 0
+              ? item.modules
+              : resolveModules(String(item.id), item.title || "", item.slug);
+
+          // TEMPORARY DIAGNOSTIC
+          if (String(item.id) === "680") {
+            debugLessonVideo("ENROLLED API", modules);
+          }
+
+          return {
+            id: String(item.id),
+
+            product_id: item.product_id ? String(item.product_id) : undefined,
+
+            slug: item.slug || "",
+            title: item.title || "Masterclass",
+
+            thumbnail:
+              item.thumbnail ||
+              "https://expressteck.tech/wp-content/uploads/2026/10/1-1024x576.jpeg",
+
+            instructor: item.instructor || "Express Tech Academy",
+            category: item.category || "My Learning",
+
+            price: Number(item.price || 0),
+            originalPrice: Number(item.originalPrice || 0),
+
+            discount: 0,
+            studentsCount: Number(item.studentsCount || 148),
+            rating: Number(item.rating || 5.0),
+            reviewsCount: Number(item.reviewsCount || 28),
+
+            daysLeft: 0,
+            isEnrolled: true,
+
+            progress: Number(item.progress ?? 0),
+
+            modules,
+
+            requirements: [
+              "Access to a computer, laptop, or smartphone.",
+              "Internet connection for video lessons and materials.",
+            ],
+
+            certificateIssued: true,
+          };
+        }),
       };
     }
+
     return {
       success: true,
       data: [],
     };
   },
-
   /**
    * Fetch Course Bundles from Expressteck.tech
    */
@@ -300,10 +514,10 @@ export const courseService = {
     if (res.success && Array.isArray(res.data) && res.data.length > 0) {
       return res.data.map((item: any) => ({
         id: String(item.id),
-        slug: item.slug || '',
+        slug: item.slug || "",
         title: item.title,
-        instructor: item.instructor || 'Express Tech Academy',
-        category: item.category || 'AI & Emerging Tech',
+        instructor: item.instructor || "Express Tech Academy",
+        category: item.category || "AI & Emerging Tech",
         originalPrice: Number(item.originalPrice || 40000),
         price: Number(item.price || 20000),
         discount: Number(item.discount || 50),
@@ -312,18 +526,20 @@ export const courseService = {
         reviewsCount: Number(item.reviewsCount || 45),
         daysLeft: Number(item.daysLeft || 5),
         isBundle: true,
-        bundleBadge: item.bundleBadge || 'Special Bundle',
+        bundleBadge: item.bundleBadge || "Special Bundle",
         packages: Array.isArray(item.packages) ? item.packages : [],
-        thumbnail: item.thumbnail || 'https://expressteck.tech/wp-content/themes/express-tech-react/assets/images/ai-automation-course-thumbnail.jpg',
-        description: item.description || '',
+        thumbnail:
+          item.thumbnail ||
+          "https://expressteck.tech/wp-content/themes/express-tech-react/assets/images/ai-automation-course-thumbnail.jpg",
+        description: item.description || "",
         modules: item.modules || [],
         requirements: item.requirements || [
-          'Access to a computer, laptop, or smartphone.',
-          'Internet connection for video lessons and materials.'
+          "Access to a computer, laptop, or smartphone.",
+          "Internet connection for video lessons and materials.",
         ],
         outcomes: item.outcomes || [
-          'Master practical real-world production technical skills',
-          'Deploy automated workflows and tools'
+          "Master practical real-world production technical skills",
+          "Deploy automated workflows and tools",
         ],
         certificateIssued: true,
       }));
@@ -349,6 +565,27 @@ export const courseService = {
   },
 
   /**
+   * Fetch the authenticated user's saved lesson progress
+   */
+  async fetchUserProgress(): Promise<ApiResponse<CourseProgress>> {
+    const res = await apiClient.get<{ progress: CourseProgress }>(
+      API_CONFIG.ENDPOINTS.USER_PROGRESS,
+    );
+
+    if (!res.success) {
+      return {
+        success: false,
+        error: res.error || "Unable to retrieve learning progress.",
+        statusCode: res.statusCode,
+      };
+    }
+
+    return {
+      success: true,
+      data: res.data?.progress || {},
+    };
+  },
+  /**
    * Initialize Paystack Checkout with unified WooCommerce backend
    */
   async initializePaystackCheckout(payload: {
@@ -357,13 +594,15 @@ export const courseService = {
     name?: string;
     phone?: string;
     user_id?: number;
-  }): Promise<ApiResponse<{
-    authorization_url: string;
-    access_code: string;
-    reference: string;
-    order_id: number;
-    amount: number;
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      authorization_url: string;
+      access_code: string;
+      reference: string;
+      order_id: number;
+      amount: number;
+    }>
+  > {
     return apiClient.post(API_CONFIG.ENDPOINTS.PAYSTACK_INITIALIZE, payload);
   },
 
@@ -373,24 +612,52 @@ export const courseService = {
   async verifyPaystackPayment(payload: {
     reference: string;
     order_id?: number;
-  }): Promise<ApiResponse<{
-    verified: boolean;
-    status: string;
-    order_id: number;
-    enrolled_courses?: number[];
-  }>> {
+  }): Promise<
+    ApiResponse<{
+      verified: boolean;
+      status: string;
+      order_id: number;
+      enrolled_courses?: number[];
+    }>
+  > {
     return apiClient.post(API_CONFIG.ENDPOINTS.PAYSTACK_VERIFY, payload);
   },
 
   /**
    * Save lesson progress to Expressteck.tech
    */
-  async updateLessonProgress(courseId: string, lessonId: string, completed: boolean): Promise<ApiResponse<any>> {
+  // async updateLessonProgress(
+  //   courseId: string,
+  //   lessonId: string,
+  //   completed: boolean,
+  // ): Promise<ApiResponse<any>> {
+  //   return apiClient.post(API_CONFIG.ENDPOINTS.USER_PROGRESS, {
+  //     course_id: courseId,
+  //     lesson_id: lessonId,
+  //     completed,
+  //   });
+  // },
+
+  /**
+   * Save lesson progress to Expressteck.tech
+   */
+  async updateLessonProgress(
+    courseId: string,
+    lessonId: string,
+    progress: {
+      completed?: boolean;
+      score?: number | null;
+      progress_percent?: number;
+      position_seconds?: number;
+    },
+  ): Promise<ApiResponse<any>> {
     return apiClient.post(API_CONFIG.ENDPOINTS.USER_PROGRESS, {
       course_id: courseId,
       lesson_id: lessonId,
-      completed,
+      completed: progress.completed ?? false,
+      score: progress.score ?? null,
+      progress_percent: progress.progress_percent ?? 0,
+      position_seconds: progress.position_seconds ?? 0,
     });
   },
 };
-

@@ -1,29 +1,32 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
-import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
   ShoppingCart01Icon,
   StarIcon,
-  UserGroupIcon,
   TickDouble01Icon,
-} from '@hugeicons/core-free-icons';
-import { Course } from '../data/mockData';
-import { useApp } from '../context/AppContext';
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useRouter } from "expo-router";
+import React from "react";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useApp } from "../context/AppContext";
+import { Course } from "../data/mockData";
 
 interface CourseCardProps {
   course: Course;
   horizontal?: boolean;
 }
 
-export const CourseCard: React.FC<CourseCardProps> = ({ course, horizontal = true }) => {
+export const CourseCard: React.FC<CourseCardProps> = ({
+  course,
+  horizontal = true,
+}) => {
   const router = useRouter();
   const { cartIds, addToCart, formatPrice, colors } = useApp();
 
-  const isInCart = cartIds.includes(course.id);
+  const isInCart = cartIds.some((id) => String(id) === String(course.id));
 
   const handlePress = () => {
-    router.push({ pathname: '/course/[id]', params: { id: course.id } });
+    router.push({ pathname: "/course/[id]", params: { id: course.id } });
   };
 
   const handleCartPress = (e: any) => {
@@ -34,58 +37,117 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, horizontal = tru
   if (horizontal) {
     return (
       <TouchableOpacity
-        style={[styles.horizontalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[
+          styles.horizontalCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
         activeOpacity={0.88}
         onPress={handlePress}
       >
         <View style={styles.imageContainer}>
-          <Image source={{ uri: course.thumbnail }} style={styles.horizontalImage} />
-          <View style={[styles.tagBadge, { backgroundColor: course.isBundle ? colors.accent : colors.accentLight, borderColor: colors.accentBorder, borderWidth: 1 }]}>
-            <Text style={[styles.tagBadgeText, { color: course.isBundle ? '#FFF' : colors.accent }]}>
-              {course.isBundle ? (course.bundleBadge || 'Special Bundle') : course.category}
+          <Image
+            source={{ uri: course.thumbnail }}
+            style={styles.horizontalImage}
+          />
+          <View
+            style={[
+              styles.tagBadge,
+              {
+                backgroundColor: course.isBundle
+                  ? colors.accent
+                  : colors.accentLight,
+                borderColor: colors.accentBorder,
+                borderWidth: 1,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.tagBadgeText,
+                { color: course.isBundle ? "#FFF" : colors.accent },
+              ]}
+            >
+              {course.isBundle
+                ? course.bundleBadge || "Special Bundle"
+                : course.category}
             </Text>
           </View>
           {course.isBundle && course.packages && course.packages.length > 0 && (
             <View style={styles.packageCountBadge}>
-              <Text style={styles.packageCountText}>{course.packages.length} In-1 Bundle</Text>
+              <Text style={styles.packageCountText}>
+                {course.packages.length} In-1 Bundle
+              </Text>
             </View>
           )}
         </View>
 
         <View style={styles.horizontalContent}>
-          <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>
+          <Text
+            style={[styles.title, { color: colors.text }]}
+            numberOfLines={2}
+          >
             {course.title}
           </Text>
-          <Text style={[styles.author, { color: colors.textSecondary }]}>By: {course.instructor}</Text>
+          <Text style={[styles.author, { color: colors.textSecondary }]}>
+            By: {course.instructor}
+          </Text>
 
           <View style={styles.statsRow}>
-            <View style={[styles.statPill, { backgroundColor: colors.surfaceLight }]}>
-              <HugeiconsIcon icon={UserGroupIcon} size={12} color={colors.textSecondary} />
+            <View
+              style={[
+                styles.statPill,
+                { backgroundColor: colors.surfaceLight },
+              ]}
+            >
+              <HugeiconsIcon
+                icon={UserGroupIcon}
+                size={12}
+                color={colors.textSecondary}
+              />
               <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                {course.studentsCount > 0 ? course.studentsCount.toLocaleString() : '0'}
+                {course.studentsCount > 0
+                  ? course.studentsCount.toLocaleString()
+                  : "0"}
               </Text>
             </View>
-            <View style={[styles.statPill, { backgroundColor: colors.surfaceLight }]}>
-              <HugeiconsIcon icon={StarIcon} size={12} color={colors.secondary} />
+            <View
+              style={[
+                styles.statPill,
+                { backgroundColor: colors.surfaceLight },
+              ]}
+            >
+              <HugeiconsIcon
+                icon={StarIcon}
+                size={12}
+                color={colors.secondary}
+              />
               <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                {course.isNew ? 'New Course' : `${course.rating} (${course.reviewsCount})`}
+                {course.isNew
+                  ? "New Course"
+                  : `${course.rating} (${course.reviewsCount})`}
               </Text>
             </View>
           </View>
 
           <View style={styles.priceRow}>
             <View>
-              <Text style={[styles.discountText, { color: colors.textSecondary }]}>
-                {course.discount}% Disc.{' '}
-                <Text style={styles.strikePrice}>{formatPrice(course.originalPrice)}</Text>
+              <Text
+                style={[styles.discountText, { color: colors.textSecondary }]}
+              >
+                {course.discount}% Disc.{" "}
+                <Text style={styles.strikePrice}>
+                  {formatPrice(course.originalPrice)}
+                </Text>
               </Text>
-              <Text style={[styles.priceText, { color: colors.text }]}>{formatPrice(course.price)}</Text>
+              <Text style={[styles.priceText, { color: colors.text }]}>
+                {formatPrice(course.price)}
+              </Text>
             </View>
 
             <TouchableOpacity
               style={[
                 styles.cartBtn,
-                { backgroundColor: isInCart ? '#10B981' : colors.accent },
+                { backgroundColor: isInCart ? "#10B981" : colors.accent },
               ]}
               onPress={handleCartPress}
             >
@@ -97,7 +159,9 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, horizontal = tru
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.daysLeftText, { color: colors.error }]}>{course.daysLeft} days left</Text>
+          <Text style={[styles.daysLeftText, { color: colors.error }]}>
+            {course.daysLeft} days left
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -106,7 +170,10 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, horizontal = tru
   // Vertical List Item
   return (
     <TouchableOpacity
-      style={[styles.verticalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[
+        styles.verticalCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
       activeOpacity={0.88}
       onPress={handlePress}
     >
@@ -114,13 +181,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, horizontal = tru
 
       <View style={styles.verticalRight}>
         <View style={styles.verticalHeader}>
-          <Text style={[styles.verticalTitle, { color: colors.text }]} numberOfLines={2}>
+          <Text
+            style={[styles.verticalTitle, { color: colors.text }]}
+            numberOfLines={2}
+          >
             {course.title}
           </Text>
           <TouchableOpacity
             style={[
               styles.smallCartBtn,
-              { backgroundColor: isInCart ? '#10B981' : colors.accent },
+              { backgroundColor: isInCart ? "#10B981" : colors.accent },
             ]}
             onPress={handleCartPress}
           >
@@ -132,32 +202,54 @@ export const CourseCard: React.FC<CourseCardProps> = ({ course, horizontal = tru
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.author, { color: colors.textSecondary }]}>By: {course.instructor}</Text>
+        <Text style={[styles.author, { color: colors.textSecondary }]}>
+          By: {course.instructor}
+        </Text>
 
         <View style={styles.statsRow}>
-          <View style={[styles.statPill, { backgroundColor: colors.surfaceLight }]}>
-            <HugeiconsIcon icon={UserGroupIcon} size={11} color={colors.textSecondary} />
+          <View
+            style={[styles.statPill, { backgroundColor: colors.surfaceLight }]}
+          >
+            <HugeiconsIcon
+              icon={UserGroupIcon}
+              size={11}
+              color={colors.textSecondary}
+            />
             <Text style={[styles.statText, { color: colors.textSecondary }]}>
-              {course.studentsCount > 0 ? course.studentsCount.toLocaleString() : '0'}
+              {course.studentsCount > 0
+                ? course.studentsCount.toLocaleString()
+                : "0"}
             </Text>
           </View>
-          <View style={[styles.statPill, { backgroundColor: colors.surfaceLight }]}>
+          <View
+            style={[styles.statPill, { backgroundColor: colors.surfaceLight }]}
+          >
             <HugeiconsIcon icon={StarIcon} size={11} color={colors.secondary} />
             <Text style={[styles.statText, { color: colors.textSecondary }]}>
-              {course.isNew ? 'New Course' : `${course.rating} (${course.reviewsCount})`}
+              {course.isNew
+                ? "New Course"
+                : `${course.rating} (${course.reviewsCount})`}
             </Text>
           </View>
         </View>
 
         <View style={styles.priceRow}>
           <View>
-            <Text style={[styles.discountText, { color: colors.textSecondary }]}>
-              {course.discount}% Disc.{' '}
-              <Text style={styles.strikePrice}>{formatPrice(course.originalPrice)}</Text>
+            <Text
+              style={[styles.discountText, { color: colors.textSecondary }]}
+            >
+              {course.discount}% Disc.{" "}
+              <Text style={styles.strikePrice}>
+                {formatPrice(course.originalPrice)}
+              </Text>
             </Text>
-            <Text style={[styles.priceText, { color: colors.text }]}>{formatPrice(course.price)}</Text>
+            <Text style={[styles.priceText, { color: colors.text }]}>
+              {formatPrice(course.price)}
+            </Text>
           </View>
-          <Text style={[styles.daysLeftText, { color: colors.error }]}>{course.daysLeft} days left</Text>
+          <Text style={[styles.daysLeftText, { color: colors.error }]}>
+            {course.daysLeft} days left
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -169,21 +261,21 @@ const styles = StyleSheet.create({
     width: 270,
     borderRadius: 18,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginRight: 14,
     marginBottom: 8,
   },
   imageContainer: {
-    position: 'relative',
+    position: "relative",
     height: 145,
-    width: '100%',
+    width: "100%",
   },
   horizontalImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   tagBadge: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
     paddingHorizontal: 10,
@@ -191,32 +283,32 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tagBadgeText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   packageCountBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 8,
     left: 8,
-    backgroundColor: 'rgba(6, 9, 18, 0.85)',
+    backgroundColor: "rgba(6, 9, 18, 0.85)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(249, 115, 22, 0.3)',
+    borderColor: "rgba(249, 115, 22, 0.3)",
   },
   packageCountText: {
-    color: '#f97316',
+    color: "#f97316",
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   horizontalContent: {
     padding: 12,
   },
   title: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     lineHeight: 18,
     marginBottom: 4,
   },
@@ -225,14 +317,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 10,
   },
   statPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
@@ -242,37 +334,37 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 4,
   },
   discountText: {
     fontSize: 10,
   },
   strikePrice: {
-    textDecorationLine: 'line-through',
+    textDecorationLine: "line-through",
   },
   priceText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   cartBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   daysLeftText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 4,
-    textAlign: 'right',
+    textAlign: "right",
   },
 
   verticalCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderRadius: 16,
     borderWidth: 1,
     padding: 10,
@@ -287,24 +379,24 @@ const styles = StyleSheet.create({
   },
   verticalRight: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
   },
   verticalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 8,
   },
   verticalTitle: {
     flex: 1,
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     lineHeight: 17,
   },
   smallCartBtn: {
     width: 28,
     height: 28,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

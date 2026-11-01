@@ -158,6 +158,17 @@ export interface AppContextType {
     orderId?: number;
     error?: string;
   }>;
+
+  saveLessonProgress: (
+    courseId: string,
+    lessonId: string,
+    progress: {
+      completed?: boolean;
+      score?: number | null;
+      progress_percent?: number;
+      position_seconds?: number;
+    },
+  ) => Promise<boolean>;
 }
 
 // -----------------------------------------------------------------------------
@@ -234,6 +245,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     }));
   }, [courses]);
 
+  const saveLessonProgress = async (
+    courseId: string,
+    lessonId: string,
+    progress: {
+      completed?: boolean;
+      score?: number | null;
+      progress_percent?: number;
+      position_seconds?: number;
+    },
+  ): Promise<boolean> => {
+    try {
+      const response = await courseService.updateLessonProgress(
+        courseId,
+        lessonId,
+        progress,
+      );
+
+      if (!response.success) {
+        console.warn(
+          "[AppContext] Failed to save lesson progress:",
+          response.error,
+        );
+        return false;
+      }
+
+      // Refresh course data after a lesson is completed.
+      // Avoid refreshing the entire application during routine playback saves.
+      if (progress.completed) {
+        await refreshLiveData();
+      }
+
+      return true;
+    } catch (error) {
+      console.error("[AppContext] Progress save error:", error);
+      return false;
+    }
+  };
   // ---------------------------------------------------------------------------
   // Refresh Live Data
   // ---------------------------------------------------------------------------
@@ -296,7 +344,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             return {
               ...course,
               isEnrolled: true,
-              progress: match.progress || 15,
+              progress: match.progress ?? course.progress ?? 0,
               modules:
                 match.modules && match.modules.length > 0
                   ? match.modules
@@ -324,16 +372,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             mergedCourses.unshift({
               ...enrolledCourse,
               isEnrolled: true,
-              progress: enrolledCourse.progress || 15,
+              progress: enrolledCourse.progress ?? 0,
             });
           }
         }
 
-        setCourses(mergedCourses);
+        const saveLessonProgress = async (
+          courseId: string,
+          lessonId: string,
+          progress: {
+            completed?: boolean;
+            score?: number | null;
+            progress_percent?: number;
+            position_seconds?: number;
+          },
+        ): Promise<boolean> => {
+          try {
+            const response = await courseService.updateLessonProgress(
+              courseId,
+              lessonId,
+              progress,
+            );
+
+            if (!response.success) {
+              console.warn(
+                "[AppContext] Failed to save lesson progress:",
+                response.error,
+              );
+
+              return false;
+            }
+
+            if (progress.completed) {
+              await refreshLiveData();
+            }
+
+            return true;
+          } catch (error) {
+            console.error("[AppContext] Progress save error:", error);
+            return false;
+          }
+        };
+        // setCourses(mergedCourses);
+
+        // Remove duplicate courses using ID, product ID and slug
+        const uniqueCourses = mergedCourses.filter((course, index, self) => {
+          return (
+            self.findIndex((item) => {
+              const sameId = String(item.id) === String(course.id);
+
+              const sameProductId =
+                item.product_id &&
+                course.product_id &&
+                String(item.product_id) === String(course.product_id);
+
+              const sameProductCourseId =
+                (item.product_id &&
+                  String(item.product_id) === String(course.id)) ||
+                (course.product_id &&
+                  String(course.product_id) === String(item.id));
+
+              const sameSlug =
+                item.slug && course.slug && item.slug === course.slug;
+
+              return sameId || sameProductId || sameProductCourseId || sameSlug;
+            }) === index
+          );
+        });
+
+        setCourses(uniqueCourses);
 
         const uniqueCategoryNames = Array.from(
           new Set(
-            mergedCourses.map((course) => course.category).filter(Boolean),
+            uniqueCourses.map((course) => course.category).filter(Boolean),
           ),
         );
 
@@ -961,6 +1072,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
         refreshLiveData,
         isRefreshing,
+        saveLessonProgress,
 
         startPaystackPayment,
       }}

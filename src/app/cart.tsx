@@ -18,16 +18,19 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useApp } from "../context/AppContext";
+import { Course } from "../data/mockData";
 
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
   const {
     courses,
+    bundles,
     cartIds,
     removeFromCart,
     formatPrice,
@@ -35,10 +38,24 @@ export default function CartScreen() {
     startPaystackPayment,
     userProfile,
   } = useApp();
+
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const cartCourses = courses.filter((c) => cartIds.includes(c.id));
-  const totalAmount = cartCourses.reduce((sum, item) => sum + item.price, 0);
+  // Combine individual courses and bundles.
+  const allCartProducts: Course[] = [...courses, ...bundles];
+
+  // Retrieve every product currently in the cart.
+  const cartCourses = cartIds
+    .map((id) =>
+      allCartProducts.find((product) => String(product.id) === String(id)),
+    )
+    .filter((product): product is Course => Boolean(product));
+
+  // Calculate combined cart total.
+  const totalAmount = cartCourses.reduce(
+    (sum, item) => sum + Number(item.price || 0),
+    0,
+  );
 
   const statusBarPadding =
     Platform.OS === "android"
@@ -47,7 +64,9 @@ export default function CartScreen() {
 
   const handlePaystackCheckout = async () => {
     if (cartCourses.length === 0 || isProcessing) return;
+
     setIsProcessing(true);
+
     try {
       await startPaystackPayment(
         cartCourses,
@@ -61,20 +80,22 @@ export default function CartScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header with Safe Area Top Padding */}
       <View style={[styles.headerRow, { paddingTop: statusBarPadding }]}>
         <TouchableOpacity
           style={styles.capsuleBackBtn}
           onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
         >
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={15} color="#FFFFFF" />
-          <Text style={styles.capsuleBackText}>Back</Text>
+          {" "}
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            size={15}
+            color="#FFFFFF"
+          />{" "}
+          <Text style={styles.capsuleBackText}>Back</Text>{" "}
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Cart({cartCourses.length})
+          Cart ({cartCourses.length})
         </Text>
 
         <TouchableOpacity onPress={() => router.push("/notifications")}>
@@ -97,20 +118,25 @@ export default function CartScreen() {
               size={54}
               color={colors.textMuted}
             />
+
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
               Your Cart is Empty
             </Text>
+
             <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
-              Add courses to your cart to begin learning!
+              Add courses or bundles to your cart to begin learning!
             </Text>
           </View>
         ) : (
           cartCourses.map((course) => (
             <View
-              key={course.id}
+              key={`${course.isBundle ? "bundle" : "course"}-${course.id}`}
               style={[
                 styles.cartCard,
-                { backgroundColor: colors.surface, borderColor: colors.border },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                },
               ]}
             >
               <Image
@@ -120,12 +146,23 @@ export default function CartScreen() {
 
               <View style={styles.contentCol}>
                 <View style={styles.titleRow}>
-                  <Text
-                    style={[styles.title, { color: colors.text }]}
-                    numberOfLines={2}
-                  >
-                    {course.title}
-                  </Text>
+                  <View style={{ flex: 1 }}>
+                    {course.isBundle && (
+                      <Text
+                        style={[styles.bundleBadge, { color: colors.accent }]}
+                      >
+                        {course.bundleBadge || "COURSE BUNDLE"}
+                      </Text>
+                    )}
+
+                    <Text
+                      style={[styles.title, { color: colors.text }]}
+                      numberOfLines={2}
+                    >
+                      {course.title}
+                    </Text>
+                  </View>
+
                   <TouchableOpacity
                     style={[
                       styles.removeBtn,
@@ -153,6 +190,7 @@ export default function CartScreen() {
                       {formatPrice(course.originalPrice)}
                     </Text>
                   </Text>
+
                   <Text style={[styles.daysLeftText, { color: colors.error }]}>
                     {course.daysLeft} days left
                   </Text>
@@ -167,12 +205,14 @@ export default function CartScreen() {
         )}
       </ScrollView>
 
-      {/* Payment Options Sheet */}
       {cartCourses.length > 0 && (
         <View
           style={[
             styles.paymentSheet,
-            { backgroundColor: colors.surface, borderColor: colors.border },
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
           ]}
         >
           <Text style={[styles.sheetTitle, { color: colors.text }]}>
@@ -187,10 +227,12 @@ export default function CartScreen() {
               size={22}
               color={colors.primary}
             />
+
             <View style={styles.totalTextCol}>
               <Text style={[styles.totalAmount, { color: colors.accent }]}>
                 {formatPrice(totalAmount)}
               </Text>
+
               <Text
                 style={[styles.totalLabel, { color: colors.textSecondary }]}
               >
@@ -215,6 +257,7 @@ export default function CartScreen() {
             {isProcessing ? (
               <View style={styles.processingRow}>
                 <ActivityIndicator color="#FFF" size="small" />
+
                 <Text style={styles.primaryPayText}>
                   Connecting Paystack...
                 </Text>
@@ -226,6 +269,7 @@ export default function CartScreen() {
                   size={18}
                   color="#FFF"
                 />
+
                 <Text style={styles.primaryPayText}>Pay with Paystack</Text>
               </View>
             )}
@@ -254,13 +298,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 12,
-  },
-  backBtn: {
-    paddingVertical: 4,
-  },
-  backText: {
-    fontSize: 16,
-    fontWeight: "bold",
   },
   capsuleBackBtn: {
     flexDirection: "row",
@@ -329,6 +366,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "bold",
     lineHeight: 17,
+  },
+  bundleBadge: {
+    fontSize: 9,
+    fontWeight: "bold",
+    marginBottom: 3,
   },
   removeBtn: {
     width: 22,
