@@ -511,6 +511,7 @@ export const courseService = {
    */
   async fetchBundles(): Promise<Course[]> {
     const res = await apiClient.get(API_CONFIG.ENDPOINTS.BUNDLES);
+    console.log("[BUNDLE DETAILS]", JSON.stringify(res.data?.[0], null, 2));
     if (res.success && Array.isArray(res.data) && res.data.length > 0) {
       return res.data.map((item: any) => ({
         id: String(item.id),

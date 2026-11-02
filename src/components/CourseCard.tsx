@@ -1,4 +1,5 @@
 import {
+  PlayIcon,
   ShoppingCart01Icon,
   StarIcon,
   TickDouble01Icon,
@@ -25,10 +26,21 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 
   const isInCart = cartIds.some((id) => String(id) === String(course.id));
 
+  // Recognize purchased courses.
+  const isEnrolled = course.isEnrolled === true || (course.progress ?? 0) > 0;
+
   const handlePress = () => {
     router.push({ pathname: "/course/[id]", params: { id: course.id } });
   };
 
+  const handleStartLearning = (e: any) => {
+    e.stopPropagation();
+
+    router.push({
+      pathname: "/course-viewer/[id]",
+      params: { id: course.id },
+    });
+  };
   const handleCartPress = (e: any) => {
     e.stopPropagation();
     addToCart(course.id);
@@ -144,19 +156,30 @@ export const CourseCard: React.FC<CourseCardProps> = ({
               </Text>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.cartBtn,
-                { backgroundColor: isInCart ? "#10B981" : colors.accent },
-              ]}
-              onPress={handleCartPress}
-            >
-              <HugeiconsIcon
-                icon={isInCart ? TickDouble01Icon : ShoppingCart01Icon}
-                size={isInCart ? 18 : 16}
-                color="#FFF"
-              />
-            </TouchableOpacity>
+            {isEnrolled ? (
+              <TouchableOpacity
+                style={styles.startLearningBtn}
+                onPress={handleStartLearning}
+                activeOpacity={0.85}
+              >
+                <HugeiconsIcon icon={PlayIcon} size={15} color="#FFF" />
+                <Text style={styles.startLearningText}>Start Learning</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.cartBtn,
+                  { backgroundColor: isInCart ? "#10B981" : colors.accent },
+                ]}
+                onPress={handleCartPress}
+              >
+                <HugeiconsIcon
+                  icon={isInCart ? TickDouble01Icon : ShoppingCart01Icon}
+                  size={isInCart ? 18 : 16}
+                  color="#FFF"
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           <Text style={[styles.daysLeftText, { color: colors.error }]}>
@@ -187,19 +210,30 @@ export const CourseCard: React.FC<CourseCardProps> = ({
           >
             {course.title}
           </Text>
-          <TouchableOpacity
-            style={[
-              styles.smallCartBtn,
-              { backgroundColor: isInCart ? "#10B981" : colors.accent },
-            ]}
-            onPress={handleCartPress}
-          >
-            <HugeiconsIcon
-              icon={isInCart ? TickDouble01Icon : ShoppingCart01Icon}
-              size={isInCart ? 16 : 14}
-              color="#FFF"
-            />
-          </TouchableOpacity>
+          {isEnrolled ? (
+            <TouchableOpacity
+              style={styles.startLearningBtn}
+              onPress={handleStartLearning}
+              activeOpacity={0.85}
+            >
+              <HugeiconsIcon icon={PlayIcon} size={13} color="#FFF" />
+              <Text style={styles.startLearningText}>Start Learning</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.smallCartBtn,
+                { backgroundColor: isInCart ? "#10B981" : colors.accent },
+              ]}
+              onPress={handleCartPress}
+            >
+              <HugeiconsIcon
+                icon={isInCart ? TickDouble01Icon : ShoppingCart01Icon}
+                size={isInCart ? 16 : 14}
+                color="#FFF"
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={[styles.author, { color: colors.textSecondary }]}>
@@ -398,5 +432,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  startLearningBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#10B981",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+
+  startLearningText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

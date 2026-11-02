@@ -1,49 +1,108 @@
-import React, { useState } from 'react';
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
+  ChevronDown,
+  ChevronUp,
+  MessageSquare,
+  Play,
+} from "lucide-react-native";
+import { useState } from "react";
+import {
   ActivityIndicator,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Play, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { CertificatePreview } from '../../components/CertificatePreview';
-import { useApp } from '../../context/AppContext';
+  Image,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { CertificatePreview } from "../../components/CertificatePreview";
+import { useApp } from "../../context/AppContext";
 
-import { INITIAL_COURSES } from '../../data/initialCourses';
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { INITIAL_COURSES } from "../../data/initialCourses";
 
 export default function CourseViewerScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { courses, colors } = useApp();
 
   const course =
-    courses.find((c) => String(c.id) === String(id) || String(c.product_id) === String(id) || c.slug === id) ||
-    INITIAL_COURSES.find((c) => String(c.id) === String(id) || String(c.product_id) === String(id) || c.slug === id);
+    courses.find(
+      (c) =>
+        String(c.id) === String(id) ||
+        String(c.product_id) === String(id) ||
+        c.slug === id,
+    ) ||
+    INITIAL_COURSES.find(
+      (c) =>
+        String(c.id) === String(id) ||
+        String(c.product_id) === String(id) ||
+        c.slug === id,
+    );
 
   const courseModules = course?.modules || [];
-  const [activeTab, setActiveTab] = useState<'content' | 'certificate'>('content');
-  const [expandedModules, setExpandedModules] = useState<string[]>(courseModules[0]?.id ? [courseModules[0].id] : []);
+  const [activeTab, setActiveTab] = useState<"content" | "certificate">(
+    "content",
+  );
+  const [expandedModules, setExpandedModules] = useState<string[]>(
+    courseModules[0]?.id ? [courseModules[0].id] : [],
+  );
   const progressPercent = course?.progress || 0;
+
+  const statusBarPadding =
+    Platform.OS === "android"
+      ? Math.max(insets.top, StatusBar.currentHeight || 24) + 6
+      : Math.max(insets.top, 12);
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) =>
-      prev.includes(moduleId) ? prev.filter((m) => m !== moduleId) : [...prev, moduleId]
+      prev.includes(moduleId)
+        ? prev.filter((m) => m !== moduleId)
+        : [...prev, moduleId],
     );
   };
 
-  const firstLessonId = courseModules[0]?.lessons?.[0]?.id || '683';
+  const firstLessonId = courseModules[0]?.lessons?.[0]?.id || "683";
 
   if (!course) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          },
+        ]}
+      >
         <ActivityIndicator size="large" color={colors.accent} />
-        <Text style={{ color: colors.textSecondary, marginTop: 16, fontSize: 15 }}>Loading course content...</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ color: colors.accent, fontWeight: '600' }}>‹ Back</Text>
+        <Text
+          style={{ color: colors.textSecondary, marginTop: 16, fontSize: 15 }}
+        >
+          Loading course content...
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            marginTop: 20,
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 8,
+            backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: colors.border,
+          }}
+        >
+          <Text style={{ color: colors.accent, fontWeight: "600" }}>
+            ‹ Back
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -52,29 +111,63 @@ export default function CourseViewerScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.secondary }]}>‹ Back</Text>
+      <View style={[styles.headerRow, { paddingTop: statusBarPadding }]}>
+        <TouchableOpacity
+          style={styles.capsuleBackBtn}
+          onPress={() => router.back()}
+        >
+          {" "}
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            size={15}
+            color="#FFFFFF"
+          />{" "}
+          <Text style={styles.capsuleBackText}>Back</Text>{" "}
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         {/* Course Card Summary */}
-        <View style={[styles.summaryCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.summaryCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.topRow}>
-            <Image source={{ uri: course.thumbnail }} style={styles.thumbnail} />
+            <Image
+              source={{ uri: course.thumbnail }}
+              style={styles.thumbnail}
+            />
 
             <View style={styles.rightCol}>
               <View style={styles.titleRow}>
-                <Text style={[styles.courseTitle, { color: colors.text }]} numberOfLines={2}>
+                <Text
+                  style={[styles.courseTitle, { color: colors.text }]}
+                  numberOfLines={2}
+                >
                   {course.title}
                 </Text>
-                <TouchableOpacity style={[styles.reviewBtn, { backgroundColor: colors.surfaceLight }]}>
+                <TouchableOpacity
+                  style={[
+                    styles.reviewBtn,
+                    { backgroundColor: colors.surfaceLight },
+                  ]}
+                >
                   <MessageSquare size={12} color={colors.text} />
-                  <Text style={[styles.reviewBtnText, { color: colors.text }]}>Drop Review</Text>
+                  <Text style={[styles.reviewBtnText, { color: colors.text }]}>
+                    Drop Review
+                  </Text>
                 </TouchableOpacity>
               </View>
-              <Text style={[styles.instructorText, { color: colors.textSecondary }]}>{course.instructor}</Text>
+              <Text
+                style={[styles.instructorText, { color: colors.textSecondary }]}
+              >
+                {course.instructor}
+              </Text>
             </View>
           </View>
 
@@ -84,7 +177,7 @@ export default function CourseViewerScreen() {
               style={[styles.playBtn, { backgroundColor: colors.primary }]}
               onPress={() =>
                 router.push({
-                  pathname: '/player/[lessonId]',
+                  pathname: "/player/[lessonId]",
                   params: { lessonId: firstLessonId, courseId: course.id },
                 })
               }
@@ -92,49 +185,112 @@ export default function CourseViewerScreen() {
               <Play size={18} color="#FFF" fill="#FFF" />
             </TouchableOpacity>
 
-            <View style={[styles.progressTrack, { backgroundColor: colors.surfaceLight }]}>
-              <View style={[styles.progressFill, { width: `${progressPercent}%`, backgroundColor: colors.secondary }]} />
+            <View
+              style={[
+                styles.progressTrack,
+                { backgroundColor: colors.surfaceLight },
+              ]}
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${progressPercent}%`,
+                    backgroundColor: colors.secondary,
+                  },
+                ]}
+              />
             </View>
 
-            <Text style={[styles.percentText, { color: colors.text }]}>{progressPercent}%</Text>
+            <Text style={[styles.percentText, { color: colors.text }]}>
+              {progressPercent}%
+            </Text>
           </View>
         </View>
 
         {/* Tab Switcher */}
-        <View style={[styles.segmentContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.segmentContainer,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <TouchableOpacity
-            style={[styles.segmentBtn, activeTab === 'content' && { backgroundColor: colors.primary }]}
-            onPress={() => setActiveTab('content')}
+            style={[
+              styles.segmentBtn,
+              activeTab === "content" && { backgroundColor: colors.primary },
+            ]}
+            onPress={() => setActiveTab("content")}
           >
-            <Text style={[styles.segmentText, { color: activeTab === 'content' ? '#FFF' : colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.segmentText,
+                {
+                  color:
+                    activeTab === "content" ? "#FFF" : colors.textSecondary,
+                },
+              ]}
+            >
               Content
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.segmentBtn, activeTab === 'certificate' && { backgroundColor: colors.primary }]}
-            onPress={() => setActiveTab('certificate')}
+            style={[
+              styles.segmentBtn,
+              activeTab === "certificate" && {
+                backgroundColor: colors.primary,
+              },
+            ]}
+            onPress={() => setActiveTab("certificate")}
           >
-            <Text style={[styles.segmentText, { color: activeTab === 'certificate' ? '#FFF' : colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.segmentText,
+                {
+                  color:
+                    activeTab === "certificate" ? "#FFF" : colors.textSecondary,
+                },
+              ]}
+            >
               Certificate
             </Text>
           </TouchableOpacity>
         </View>
 
-        {activeTab === 'content' ? (
+        {activeTab === "content" ? (
           <View style={styles.modulesContainer}>
             {courseModules.map((module) => {
               const isExpanded = expandedModules.includes(module.id);
               return (
-                <View key={module.id} style={[styles.moduleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  key={module.id}
+                  style={[
+                    styles.moduleCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
                   <TouchableOpacity
                     style={styles.moduleHeader}
                     onPress={() => toggleModule(module.id)}
                   >
                     <View style={styles.moduleHeaderLeft}>
-                      <Text style={[styles.moduleTitle, { color: colors.text }]}>{module.title}</Text>
-                      <Text style={[styles.moduleSub, { color: colors.textSecondary }]}>
-                        {module.lecturesCount} Lectures | {module.durationMinutes} Minutes
+                      <Text
+                        style={[styles.moduleTitle, { color: colors.text }]}
+                      >
+                        {module.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.moduleSub,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {module.lecturesCount} Lectures |{" "}
+                        {module.durationMinutes} Minutes
                       </Text>
                     </View>
 
@@ -146,21 +302,40 @@ export default function CourseViewerScreen() {
                   </TouchableOpacity>
 
                   {isExpanded && module.lessons && (
-                    <View style={[styles.lessonsList, { borderTopColor: colors.border }]}>
+                    <View
+                      style={[
+                        styles.lessonsList,
+                        { borderTopColor: colors.border },
+                      ]}
+                    >
                       {module.lessons.map((lesson) => (
                         <TouchableOpacity
                           key={lesson.id}
                           style={styles.lessonRow}
                           onPress={() =>
                             router.push({
-                              pathname: '/player/[lessonId]',
-                              params: { lessonId: lesson.id, courseId: course.id },
+                              pathname: "/player/[lessonId]",
+                              params: {
+                                lessonId: lesson.id,
+                                courseId: course.id,
+                              },
                             })
                           }
                         >
                           <Play size={14} color={colors.primary} />
-                          <Text style={[styles.lessonTitle, { color: colors.text }]}>{lesson.title}</Text>
-                          <Text style={[styles.lessonDuration, { color: colors.textMuted }]}>{lesson.duration}</Text>
+                          <Text
+                            style={[styles.lessonTitle, { color: colors.text }]}
+                          >
+                            {lesson.title}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.lessonDuration,
+                              { color: colors.textMuted },
+                            ]}
+                          >
+                            {lesson.duration}
+                          </Text>
                         </TouchableOpacity>
                       ))}
                     </View>
@@ -184,15 +359,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backBtn: {
-    paddingVertical: 4,
+  capsuleBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
   },
-  backText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  capsuleBackText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
   },
   scrollContent: {
     paddingBottom: 40,
@@ -205,7 +392,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   topRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   thumbnail: {
@@ -217,20 +404,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: 6,
   },
   courseTitle: {
     flex: 1,
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     lineHeight: 17,
   },
   reviewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -238,15 +425,15 @@ const styles = StyleSheet.create({
   },
   reviewBtnText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   instructorText: {
     fontSize: 11,
     marginTop: 4,
   },
   progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 14,
     gap: 10,
   },
@@ -254,25 +441,25 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   progressTrack: {
     flex: 1,
     height: 8,
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 4,
   },
   percentText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   segmentContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderRadius: 22,
     marginHorizontal: 16,
     marginBottom: 16,
@@ -283,11 +470,11 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: 18,
-    alignItems: 'center',
+    alignItems: "center",
   },
   segmentText: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   modulesContainer: {
     paddingHorizontal: 16,
@@ -299,16 +486,16 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   moduleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   moduleHeaderLeft: {
     flex: 1,
   },
   moduleTitle: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   moduleSub: {
     fontSize: 11,
@@ -321,8 +508,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   lessonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 4,
   },

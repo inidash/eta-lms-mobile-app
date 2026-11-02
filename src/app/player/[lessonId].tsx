@@ -1,4 +1,6 @@
 import { courseService } from "@/services/courseService";
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   AlertCircle,
@@ -158,33 +160,102 @@ export default function VideoPlayerScreen() {
     typeof currentLesson.videoUrl === "string" &&
     currentLesson.videoUrl.endsWith(".apk");
 
+  // const persistProgress = useCallback(
+  //   async (completed = false, score: number | null = null) => {
+  //     const resolvedCourseId = String(courseId || currentCourse?.id || "");
+  //     const resolvedLessonId = String(lessonId || "");
+
+  //     if (!resolvedCourseId || !resolvedLessonId) {
+  //       console.warn("[PLAYER] Missing course or lesson ID.");
+  //       return false;
+  //     }
+
+  //     try {
+  //       const success = await saveLessonProgress(
+  //         resolvedCourseId,
+  //         resolvedLessonId,
+  //         {
+  //           completed,
+  //           score,
+  //         },
+  //       );
+
+  //       if (success && completed) {
+  //         setIsCompleted(true);
+  //         isCompletedRef.current = true;
+  //       }
+
+  //       if (!success) {
+  //         console.warn("[PLAYER] Progress could not be saved.");
+  //       }
+
+  //       return success;
+  //     } catch (error) {
+  //       console.error("[PLAYER] Progress save error:", error);
+  //       return false;
+  //     }
+  //   },
+  //   [courseId, currentCourse?.id, lessonId, saveLessonProgress],
+  // );
   const persistProgress = useCallback(
-    async (completed = false, score: number | null = null) => {
+    async (
+      completed = false,
+      score: number | null = null,
+      positionSeconds = videoPosition.current,
+      durationSeconds = videoDuration.current,
+    ) => {
       const resolvedCourseId = String(courseId || currentCourse?.id || "");
       const resolvedLessonId = String(lessonId || "");
 
       if (!resolvedCourseId || !resolvedLessonId) {
-        console.warn("[PLAYER] Missing course or lesson ID.");
+        console.warn("[PLAYER] Missing course or lesson ID.", {
+          resolvedCourseId,
+          resolvedLessonId,
+        });
         return false;
       }
 
+      const position = Math.max(0, Math.floor(positionSeconds || 0));
+      const duration = Math.max(0, durationSeconds || 0);
+
+      const progressPercent = completed
+        ? 100
+        : duration > 0
+          ? Math.min(99, Math.round((position / duration) * 100))
+          : 0;
+
       try {
+        console.log("[PLAYER] Saving lesson progress:", {
+          courseId: resolvedCourseId,
+          lessonId: resolvedLessonId,
+          completed,
+          score,
+          progressPercent,
+          positionSeconds: position,
+        });
+
         const success = await saveLessonProgress(
           resolvedCourseId,
           resolvedLessonId,
           {
             completed,
             score,
+            progress_percent: progressPercent,
+            position_seconds: position,
           },
         );
 
-        if (success && completed) {
-          setIsCompleted(true);
-          isCompletedRef.current = true;
-        }
+        if (success) {
+          lastSavedPosition.current = position;
 
-        if (!success) {
-          console.warn("[PLAYER] Progress could not be saved.");
+          if (completed) {
+            setIsCompleted(true);
+            isCompletedRef.current = true;
+          }
+
+          console.log("[PLAYER] Progress saved successfully.");
+        } else {
+          console.warn("[PLAYER] Backend rejected progress save.");
         }
 
         return success;
@@ -370,10 +441,17 @@ export default function VideoPlayerScreen() {
       <View
         style={[styles.headerRow, { paddingTop: Math.max(insets.top, 14) }]}
       >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={[styles.backText, { color: colors.secondary }]}>
-            ‹ Back
-          </Text>
+        <TouchableOpacity
+          style={styles.capsuleBackBtn}
+          onPress={() => router.back()}
+        >
+          {" "}
+          <HugeiconsIcon
+            icon={ArrowLeft01Icon}
+            size={15}
+            color="#FFFFFF"
+          />{" "}
+          <Text style={styles.capsuleBackText}>Back</Text>{" "}
         </TouchableOpacity>
         <Text
           style={[styles.headerCourseTitle, { color: colors.textSecondary }]}
@@ -661,7 +739,21 @@ export default function VideoPlayerScreen() {
           //   )}
           // </View>
           <View style={styles.playerContainer}>
-            {currentLesson.videoUrl || currentLesson.url ? (
+            {!progressLoaded ? (
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: "#000",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={{ color: "#FFFFFF", marginTop: 10 }}>
+                  Restoring lesson progress...
+                </Text>
+              </View>
+            ) : currentLesson.videoUrl || currentLesson.url ? (
               <WebView
                 ref={webViewRef}
                 injectedJavaScriptBeforeContentLoaded={`
@@ -724,6 +816,11 @@ export default function VideoPlayerScreen() {
                     if (message.type === "VIDEO_READY") {
                       videoDuration.current = Number(message.duration || 0);
 
+                      console.log("[PLAYER] Video ready:", {
+                        duration: videoDuration.current,
+                        savedPosition,
+                      });
+
                       if (savedPosition > 0) {
                         const restoreScript = `
                           window.etaRestorePositionWhenReady &&
@@ -743,8 +840,19 @@ export default function VideoPlayerScreen() {
                       videoPosition.current = position;
                       videoDuration.current = duration;
 
+                      const now = Date.now();
+
+                      // Save progress when the video completes.
                       if (completed && !isCompletedRef.current) {
-                        void persistProgress(true);
+                        void persistProgress(true, null, position, duration);
+                        return;
+                      }
+
+                      // Save progress periodically and whenever playback pauses.
+                      if (now - lastSaveTime.current >= 9000 && position > 0) {
+                        lastSaveTime.current = now;
+
+                        void persistProgress(false, null, position, duration);
                       }
                     }
                   } catch (error) {
@@ -949,13 +1057,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 10,
   },
-  backBtn: {
-    paddingVertical: 4,
-    paddingRight: 10,
+
+  capsuleBackBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.12)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
   },
-  backText: {
-    fontSize: 16,
-    fontWeight: "bold",
+  capsuleBackText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
   },
   headerCourseTitle: {
     flex: 1,

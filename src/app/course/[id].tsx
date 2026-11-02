@@ -3,11 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  FileText,
   Heart,
-  HelpCircle,
   Play,
   Share2,
   ShoppingCart,
@@ -30,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CertificatePreview } from "../../components/CertificatePreview";
 import { useApp } from "../../context/AppContext";
 
+import CourseReviews from "../../components/CourseReviews";
 import { INITIAL_COURSES } from "../../data/initialCourses";
 
 export default function CourseDetailScreen() {
@@ -38,6 +35,7 @@ export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     courses,
+    bundles,
     wishlistIds,
     toggleWishlist,
     addToCart,
@@ -46,20 +44,37 @@ export default function CourseDetailScreen() {
   } = useApp();
 
   const course =
+    bundles.find(
+      (b) =>
+        String(b.id) === String(id) ||
+        String(b.product_id) === String(id) ||
+        String(b.slug) === String(id),
+    ) ||
     courses.find(
       (c) =>
         String(c.id) === String(id) ||
         String(c.product_id) === String(id) ||
-        c.slug === id,
+        String(c.slug) === String(id),
     ) ||
     INITIAL_COURSES.find(
       (c) =>
         String(c.id) === String(id) ||
         String(c.product_id) === String(id) ||
-        c.slug === id,
+        String(c.slug) === String(id),
     );
 
   const courseModules = course?.modules || [];
+
+  const includedBundleCourses = course?.isBundle
+    ? (course.packages || [])
+        .map((packageName) =>
+          courses.find(
+            (c) =>
+              c.title.trim().toLowerCase() === packageName.trim().toLowerCase(),
+          ),
+        )
+        .filter((c): c is NonNullable<typeof c> => Boolean(c))
+    : [];
 
   const [activeTab, setActiveTab] = useState<"info" | "content" | "review">(
     "info",
@@ -329,6 +344,47 @@ export default function CourseDetailScreen() {
         {activeTab === "info" && (
           <View style={styles.tabContent}>
             {/* Other Information Specs Grid */}
+            {course.isBundle && (
+              <View
+                style={[
+                  styles.infoCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text style={[styles.cardHeaderTitle, { color: colors.text }]}>
+                  About This Bundle
+                </Text>
+
+                <Text
+                  style={[styles.bodyText, { color: colors.textSecondary }]}
+                >
+                  {course.description ||
+                    "Get access to a carefully selected collection of premium masterclasses designed to help you develop practical skills."}
+                </Text>
+
+                {course.bundleBadge && (
+                  <View
+                    style={{
+                      alignSelf: "flex-start",
+                      marginTop: 12,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      backgroundColor: colors.primary,
+                    }}
+                  >
+                    <Text
+                      style={{ color: "#FFF", fontWeight: "700", fontSize: 12 }}
+                    >
+                      {course.bundleBadge}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
             <View
               style={[
                 styles.infoCard,
@@ -338,7 +394,103 @@ export default function CourseDetailScreen() {
               <Text style={[styles.cardHeaderTitle, { color: colors.text }]}>
                 Other Information
               </Text>
+              {course.isBundle && (
+                <View
+                  style={[
+                    styles.infoCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.cardHeaderTitle, { color: colors.text }]}
+                  >
+                    What's Included in This Bundle?
+                  </Text>
 
+                  {/* {course.packages?.map((packageName, index) => (
+                    <View
+                      key={`${index}-${packageName}`}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "flex-start",
+                        marginBottom: 14,
+                        gap: 10,
+                      }}
+                    >
+                      <CheckCircle2 size={19} color={colors.success} />
+
+                      <Text
+                        style={{
+                          flex: 1,
+                          color: colors.textSecondary,
+                          fontSize: 13,
+                          lineHeight: 20,
+                        }}
+                      >
+                        {packageName}
+                      </Text>
+                    </View>
+                  ))} */}
+                  {course.packages?.map((packageName, index) => {
+                    const matchedCourse = courses.find(
+                      (c) =>
+                        c.title.trim().toLowerCase() ===
+                        packageName.trim().toLowerCase(),
+                    );
+
+                    return (
+                      <TouchableOpacity
+                        key={`${index}-${packageName}`}
+                        activeOpacity={matchedCourse ? 0.7 : 1}
+                        onPress={() => {
+                          if (matchedCourse) {
+                            router.push({
+                              pathname: "/course/[id]",
+                              params: { id: matchedCourse.id },
+                            });
+                          }
+                        }}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          marginBottom: 14,
+                          gap: 10,
+                        }}
+                      >
+                        <CheckCircle2 size={19} color={colors.success} />
+
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={{
+                              color: colors.text,
+                              fontSize: 13,
+                              fontWeight: "600",
+                              lineHeight: 20,
+                            }}
+                          >
+                            {packageName}
+                          </Text>
+
+                          <Text
+                            style={{
+                              color: colors.accent,
+                              fontSize: 11,
+                              marginTop: 3,
+                            }}
+                          >
+                            {matchedCourse
+                              ? "View course details →"
+                              : "Included in this bundle"}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
               <View style={styles.specsGrid}>
                 <View style={styles.specItem}>
                   <Text style={styles.specIcon}>👍</Text>
@@ -502,7 +654,7 @@ export default function CourseDetailScreen() {
         )}
 
         {/* Content Tab Accordion */}
-        {(activeTab === "content" || activeTab === "info") && (
+        {/* {(activeTab === "content" || activeTab === "info") && (
           <View
             style={[
               styles.infoCard,
@@ -648,7 +800,156 @@ export default function CourseDetailScreen() {
               );
             })}
           </View>
+        )} */}
+        {/* Content Tab */}
+        {(activeTab === "content" || activeTab === "info") && (
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                marginHorizontal: 16,
+              },
+            ]}
+          >
+            <Text style={[styles.cardHeaderTitle, { color: colors.text }]}>
+              {course.isBundle ? "Bundle Course Content" : "Course Content"}
+            </Text>
+
+            {course.isBundle ? (
+              includedBundleCourses.length > 0 ? (
+                includedBundleCourses.map((bundleCourse, index) => (
+                  <View key={bundleCourse.id} style={{ marginBottom: 18 }}>
+                    <Text
+                      style={{
+                        color: colors.accent,
+                        fontSize: 14,
+                        fontWeight: "700",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {index + 1}. {bundleCourse.title}
+                    </Text>
+
+                    {bundleCourse.modules?.length ? (
+                      bundleCourse.modules.map((module) => (
+                        <View
+                          key={module.id}
+                          style={[
+                            styles.moduleBox,
+                            { backgroundColor: colors.surfaceLight },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.moduleTitle, { color: colors.text }]}
+                          >
+                            {module.title}
+                          </Text>
+
+                          <Text
+                            style={[
+                              styles.moduleSub,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            {module.lecturesCount} Items |{" "}
+                            {module.durationMinutes} Minutes
+                          </Text>
+
+                          {module.lessons?.map((lesson) => (
+                            <View key={lesson.id} style={styles.lessonItem}>
+                              <Play size={14} color={colors.primary} />
+
+                              <Text
+                                style={[
+                                  styles.lessonTitle,
+                                  { color: colors.text },
+                                ]}
+                              >
+                                {lesson.title}
+                              </Text>
+
+                              <Text
+                                style={[
+                                  styles.lessonDuration,
+                                  { color: colors.textMuted },
+                                ]}
+                              >
+                                {lesson.duration}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      ))
+                    ) : (
+                      <Text
+                        style={{
+                          color: colors.textSecondary,
+                          fontSize: 12,
+                        }}
+                      >
+                        Course curriculum is currently unavailable.
+                      </Text>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <Text
+                  style={[styles.bodyText, { color: colors.textSecondary }]}
+                >
+                  The individual courses included in this bundle could not be
+                  matched with your course catalogue.
+                </Text>
+              )
+            ) : (
+              courseModules.map((module) => (
+                <View
+                  key={module.id}
+                  style={[
+                    styles.moduleBox,
+                    { backgroundColor: colors.surfaceLight },
+                  ]}
+                >
+                  <Text style={[styles.moduleTitle, { color: colors.text }]}>
+                    {module.title}
+                  </Text>
+
+                  <Text
+                    style={[styles.moduleSub, { color: colors.textSecondary }]}
+                  >
+                    {module.lecturesCount} Items | {module.durationMinutes}{" "}
+                    Minutes
+                  </Text>
+
+                  {module.lessons?.map((lesson) => (
+                    <View key={lesson.id} style={styles.lessonItem}>
+                      <Play size={14} color={colors.primary} />
+                      <Text
+                        style={[styles.lessonTitle, { color: colors.text }]}
+                      >
+                        {lesson.title}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.lessonDuration,
+                          { color: colors.textMuted },
+                        ]}
+                      >
+                        {lesson.duration}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ))
+            )}
+          </View>
         )}
+        <CourseReviews
+          courseId={String(course.id)}
+          averageRating={course.rating}
+          totalReviews={course.reviewsCount}
+        />
       </ScrollView>
 
       {/* Sticky Bottom Bar */}

@@ -294,7 +294,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         courseService.fetchCourses(),
         courseService.fetchEnrolledCourses(),
       ]);
-
+      console.log(
+        "[PROGRESS DIAGNOSTIC] ENROLLED COURSES:",
+        JSON.stringify(await courseService.fetchEnrolledCourses(), null, 2),
+      );
       const enrolledList =
         enrolledRes.success && Array.isArray(enrolledRes.data)
           ? enrolledRes.data
@@ -1091,7 +1094,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 };
 
-// -----------------------------------------------------------------------------
+// ----------------------------------------- ------------------------------------
 // Hook
 // -----------------------------------------------------------------------------
 
