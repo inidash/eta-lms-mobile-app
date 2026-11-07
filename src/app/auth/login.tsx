@@ -7,7 +7,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -29,6 +29,18 @@ import { useApp } from "../../context/AppContext";
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { returnTo } = useLocalSearchParams<{
+    returnTo?: string;
+  }>();
+
+  // Determines where to navigate after successful login.
+  const getPostLoginDestination = () => {
+    if (typeof returnTo === "string" && returnTo.startsWith("/")) {
+      return returnTo;
+    }
+
+    return "/(tabs)";
+  };
   const { login, authError, colors } = useApp();
 
   const [email, setEmail] = useState("");
@@ -70,7 +82,7 @@ export default function LoginScreen() {
       const success = await login(trimmedEmail, password);
 
       if (success) {
-        router.replace("/(tabs)");
+        router.replace(getPostLoginDestination() as any);
       }
     } catch (error) {
       setErrorMessage(
@@ -235,7 +247,8 @@ export default function LoginScreen() {
                 "Google authentication successful:",
                 result.user.email,
               );
-              router.replace("/(tabs)");
+
+              router.replace(getPostLoginDestination() as any);
             }}
             onError={(message) => {
               setErrorMessage(message);

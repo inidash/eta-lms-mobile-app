@@ -286,7 +286,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   // Refresh Live Data
   // ---------------------------------------------------------------------------
 
-  const refreshLiveData = useCallback(async () => {
+  const refreshLiveData = useCallback(async (preserveCartIds?: string[]) => {
     setIsRefreshing(true);
 
     try {
@@ -294,10 +294,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         courseService.fetchCourses(),
         courseService.fetchEnrolledCourses(),
       ]);
+
       console.log(
         "[PROGRESS DIAGNOSTIC] ENROLLED COURSES:",
         JSON.stringify(await courseService.fetchEnrolledCourses(), null, 2),
       );
+
       const enrolledList =
         enrolledRes.success && Array.isArray(enrolledRes.data)
           ? enrolledRes.data
@@ -380,45 +382,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         }
 
-        const saveLessonProgress = async (
-          courseId: string,
-          lessonId: string,
-          progress: {
-            completed?: boolean;
-            score?: number | null;
-            progress_percent?: number;
-            position_seconds?: number;
-          },
-        ): Promise<boolean> => {
-          try {
-            const response = await courseService.updateLessonProgress(
-              courseId,
-              lessonId,
-              progress,
-            );
-
-            if (!response.success) {
-              console.warn(
-                "[AppContext] Failed to save lesson progress:",
-                response.error,
-              );
-
-              return false;
-            }
-
-            if (progress.completed) {
-              await refreshLiveData();
-            }
-
-            return true;
-          } catch (error) {
-            console.error("[AppContext] Progress save error:", error);
-            return false;
-          }
-        };
-        // setCourses(mergedCourses);
-
-        // Remove duplicate courses using ID, product ID and slug
+        // Remove duplicate courses using ID, product ID and slug.
         const uniqueCourses = mergedCourses.filter((course, index, self) => {
           return (
             self.findIndex((item) => {
@@ -464,6 +428,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       }
 
+      // Fetch additional live data.
       const [
         fetchedBundles,
         fetchedCategories,
@@ -492,13 +457,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         setSiteInfo(fetchedSiteInfo);
       }
 
-      const [cart, wishlist] = await Promise.all([
+      // ---------------------------------------------------------------------
+      // Cart and Wishlist Synchronization
+      // ---------------------------------------------------------------------
+
+      const [serverCart, wishlist] = await Promise.all([
         userDataService.loadCart(),
         userDataService.loadWishlist(),
       ]);
 
-      setCartIds(cart);
+      // Merge authenticated cart with preserved guest cart.
+      const mergedCart = Array.from(
+        new Set([
+          ...(Array.isArray(serverCart) ? serverCart : []),
+          ...(preserveCartIds || []),
+        ]),
+      );
+
+      console.log("[CART SYNC] Server cart:", serverCart);
+
+      console.log("[CART SYNC] Preserved guest cart:", preserveCartIds);
+
+      console.log("[CART SYNC] Final merged cart:", mergedCart);
+
+      // Update local cart.
+      setCartIds(mergedCart);
+
+      // Synchronize merged cart with authenticated account.
+      if (preserveCartIds && preserveCartIds.length > 0) {
+        const syncResponse = await userDataService.syncCart(mergedCart);
+
+        console.log("[CART SYNC] Backend sync response:", syncResponse);
+      }
+
       setWishlistIds(wishlist);
+
+      // ---------------------------------------------------------------------
+      // Notifications
+      // ---------------------------------------------------------------------
 
       const notificationResponse = await userDataService.fetchNotifications();
 
@@ -619,6 +615,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   ): Promise<boolean> => {
     setAuthError(null);
 
+    // Preserve guest cart before authentication.
+    const guestCartIds = [...cartIds];
+
+    console.log("[LOGIN] Guest cart before authentication:", guestCartIds);
+
     try {
       const response = await authService.login(usernameOrEmail, password);
 
@@ -639,7 +640,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
         showToast(`Welcome back, ${completeProfile.name}!`);
 
-        await refreshLiveData();
+        // Refresh data while preserving guest cart.
+        await refreshLiveData(guestCartIds);
+
+        console.log("[LOGIN] Authentication successful.");
+        console.log("[LOGIN] Guest cart preserved:", guestCartIds);
 
         return true;
       }
@@ -667,6 +672,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   const signup = async (payload: RegisterPayload): Promise<boolean> => {
     setAuthError(null);
 
+    // Preserve guest cart before account creation.
+    const guestCartIds = [...cartIds];
+
+    console.log("[SIGNUP] Guest cart before registration:", guestCartIds);
+
     try {
       const response = await authService.register(payload);
 
@@ -689,7 +699,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           `Account created successfully! Welcome ${completeProfile.name}`,
         );
 
-        await refreshLiveData();
+        // Refresh data while preserving guest cart.
+        await refreshLiveData(guestCartIds);
+
+        console.log("[SIGNUP] Registration successful.");
+        console.log("[SIGNUP] Guest cart preserved:", guestCartIds);
 
         return true;
       }
@@ -710,7 +724,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       return false;
     }
   };
-
   // ---------------------------------------------------------------------------
   // Update User Profile
   // ---------------------------------------------------------------------------
@@ -897,12 +910,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
     error?: string;
   }> => {
     try {
-      showToast("Connecting to Paystack gateway...");
+      // Prevent checkout while authentication is being restored.
+      if (isLoadingAuth) {
+        return {
+          success: false,
+          error: "Please wait while we verify your account.",
+        };
+      }
 
-      const targetEmail =
-        email || userProfile.email || "student@expressteck.tech";
+      // Enforce authentication.
+      if (!isAuthenticated || !userToken) {
+        showToast("Please log in before proceeding to checkout.");
+
+        return {
+          success: false,
+          error: "Authentication required. Please log in.",
+        };
+      }
+
+      // Validate cart.
+      if (!items || items.length === 0) {
+        return {
+          success: false,
+          error: "Your cart is empty.",
+        };
+      }
+
+      // Require a valid account email.
+      const targetEmail = (email || userProfile.email || "").trim();
+
+      if (!targetEmail) {
+        showToast("Your account email is missing. Please update your profile.");
+
+        return {
+          success: false,
+          error: "A valid account email is required.",
+        };
+      }
 
       const targetName = name || userProfile.name || "Student";
+
+      showToast("Connecting to Paystack gateway...");
 
       const initializationResponse =
         await courseService.initializePaystackCheckout({
@@ -978,39 +1026,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         order_id: orderId,
       });
 
-      if (
+      const isVerified =
         verificationResponse.success &&
         verificationResponse.data &&
         (verificationResponse.data.verified ||
           (verificationResponse.data as any).enrolled ||
-          (verificationResponse.data as any).success)
-      ) {
+          (verificationResponse.data as any).success);
+
+      if (isVerified) {
         clearCart();
+
         await refreshLiveData();
 
         showToast("Payment successful! Your course is now active.");
 
         router.push("/(tabs)/my-courses");
-      } else {
-        showToast("Payment completed. Verifying enrollment...");
 
-        clearCart();
-        await refreshLiveData();
-
-        router.push("/(tabs)/my-courses");
+        return;
       }
+
+      // Do not clear cart when payment verification is unsuccessful.
+      showToast(
+        "Payment received, but verification is pending. Please try again shortly.",
+      );
     } catch (error) {
       console.warn("[AppContext] Paystack verification error:", error);
 
-      clearCart();
-      await refreshLiveData();
-
-      showToast("Payment confirmed! Enrolling in course...");
-
-      router.push("/(tabs)/my-courses");
+      // Preserve cart contents until payment is verified.
+      showToast(
+        "Unable to verify payment right now. Your cart has been preserved.",
+      );
     }
   };
-
   // ---------------------------------------------------------------------------
   // Close Paystack Modal
   // ---------------------------------------------------------------------------
@@ -1089,6 +1136,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         orderId={paystackSession.orderId}
         onClose={closePaystackModal}
         onSuccess={handlePaystackModalSuccess}
+        colors={colors}
       />
     </AppContext.Provider>
   );

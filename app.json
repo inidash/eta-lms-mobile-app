@@ -26,7 +26,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0A0F1D",
-          "image": "./assets/images/eta-splash.png",
+          "image": "./assets/eta-logo.png",
           "imageWidth": 100
         }
       ],

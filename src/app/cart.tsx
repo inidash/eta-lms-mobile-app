@@ -37,6 +37,9 @@ export default function CartScreen() {
     colors,
     startPaystackPayment,
     userProfile,
+    isAuthenticated,
+    isLoadingAuth,
+    userToken,
   } = useApp();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -62,15 +65,35 @@ export default function CartScreen() {
       ? Math.max(insets.top, StatusBar.currentHeight || 24) + 6
       : Math.max(insets.top, 12);
 
+  // Handle Paystack checkout.
   const handlePaystackCheckout = async () => {
-    if (cartCourses.length === 0 || isProcessing) return;
+    // Prevent checkout while authentication is still loading.
+    console.log("[CART CHECKOUT AUTH]", {
+      isAuthenticated,
+      isLoadingAuth,
+      hasUserToken: !!userToken,
+    });
+    if (isLoadingAuth || isProcessing) return;
+
+    // Redirect guests to Login and preserve the Cart destination.
+    if (!isAuthenticated || !userToken) {
+      router.push({
+        pathname: "/auth/login",
+        params: {
+          returnTo: "/cart",
+        },
+      });
+      return;
+    }
+
+    if (cartCourses.length === 0) return;
 
     setIsProcessing(true);
 
     try {
       await startPaystackPayment(
         cartCourses,
-        userProfile.email || "student@expressteck.tech",
+        userProfile.email || "",
         userProfile.name || "Student",
       );
     } finally {
@@ -245,21 +268,27 @@ export default function CartScreen() {
             style={[
               styles.primaryPayBtn,
               {
-                backgroundColor: isProcessing
-                  ? colors.accentDark
-                  : colors.accent,
-                opacity: isProcessing ? 0.8 : 1,
+                backgroundColor:
+                  isProcessing || isLoadingAuth
+                    ? colors.accentDark
+                    : colors.accent,
+                opacity: isProcessing || isLoadingAuth ? 0.8 : 1,
               },
             ]}
-            disabled={isProcessing}
-            onPress={handlePaystackCheckout}
+            disabled={isProcessing || isLoadingAuth}
+            onPress={() => {
+              console.log("[CART] Paystack button pressed");
+              handlePaystackCheckout();
+            }}
           >
-            {isProcessing ? (
+            {isProcessing || isLoadingAuth ? (
               <View style={styles.processingRow}>
                 <ActivityIndicator color="#FFF" size="small" />
 
                 <Text style={styles.primaryPayText}>
-                  Connecting Paystack...
+                  {isLoadingAuth
+                    ? "Checking account..."
+                    : "Connecting Paystack..."}
                 </Text>
               </View>
             ) : (
